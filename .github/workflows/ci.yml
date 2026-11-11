@@ -1,0 +1,60 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: spacexr-rendering
+      - uses: actions/checkout@v7
+        with:
+          repository: pandaGaume/3d-tiles-core
+          path: 3d-tiles-core
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+      - name: Build core
+        working-directory: 3d-tiles-core/node
+        run: |
+          npm ci
+          npm run build --workspace @spacexr/3d-tiles-core --workspace @spacexr/tiles --workspace @spacexr/3d-tiles-runtime
+      - uses: actions/checkout@v7
+        with:
+          repository: pandaGaume/terrain-core
+          path: terrain-core
+      - name: Build terrain
+        working-directory: terrain-core
+        run: |
+          npm ci
+          npm run build
+      - uses: actions/checkout@v7
+        with:
+          repository: pandaGaume/quantia
+          path: quantia
+      - uses: actions/checkout@v7
+        with:
+          repository: pandaGaume/celestial-core
+          path: celestial-core
+      - uses: actions/checkout@v7
+        with:
+          repository: pandaGaume/atmosphere-core
+          path: atmosphere-core
+      - name: Build Earth dependencies
+        run: |
+          npm --prefix quantia ci --install-links=false
+          npm --prefix quantia run build
+          npm --prefix celestial-core ci --install-links=false
+          npm --prefix celestial-core run build
+          npm --prefix atmosphere-core ci --install-links=false
+          npm --prefix atmosphere-core run build
+      - name: Check rendering
+        working-directory: spacexr-rendering
+        run: |
+          npm ci
+          npm run check

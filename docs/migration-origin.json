@@ -1,0 +1,14 @@
+{
+    "date": "2026-11-10",
+    "sources": {
+        "3d-tiles-core": "75a99c2abe8b5346f84dd015febb9f48e528916d",
+        "3d-tiles-babylon": "863c75ccf33fab2f1b99ca80f38c68bbf21e25b4"
+    },
+    "packages": {
+        "@spacexr/raster": "terrain-core/packages/raster",
+        "@spacexr/dem": "terrain-core/packages/dem",
+        "@spacexr/grid": "terrain-core/packages/grid",
+        "@spacexr/3d-tiles-babylon": "spacexr-rendering/packages/core"
+    },
+    "compatibility": "Package names, versions and algorithms preserved; no publication performed."
+}

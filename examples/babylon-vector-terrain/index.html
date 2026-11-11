@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <link rel="icon" href="data:," />
+        <title>Vecteurs drapés sur le terrain</title>
+    </head>
+    <body>
+        <canvas id="terrain"></canvas>
+        <aside>
+            <h1>Vecteurs drapés</h1>
+            <p>Lignes cyan, zone jaune avec trou transparent, points roses. Géométries fictives de démonstration autour du Mont-Blanc.</p>
+            <p>Relief : Mapzen Terrain Tiles, AWS Open Data. Déplacement et zoom : contrôles de la caméra existante.</p>
+            <output id="status">Préparation des variantes et tuiles transparentes…</output>
+        </aside>
+        <script type="module" src="/src/main.ts"></script>
+    </body>
+</html>

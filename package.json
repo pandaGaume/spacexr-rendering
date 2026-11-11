@@ -1,0 +1,68 @@
+{
+    "name": "@spacexr/rendering-workspace",
+    "version": "0.0.0",
+    "private": true,
+    "description": "SpaceXR rendering integrations, shader tools and working 3D Tiles and terrain examples.",
+    "license": "Apache-2.0",
+    "author": "Guillaume Pelletier (SpaceXR)",
+    "type": "module",
+    "engines": {
+        "node": ">=20.11.0"
+    },
+    "workspaces": [
+        "packages/core",
+        "packages/tools",
+        "packages/babylon-earth",
+        "packages/babylon-gltf-ext",
+        "examples/*"
+    ],
+    "overrides": {
+        "esbuild": "0.28.2"
+    },
+    "scripts": {
+        "shaders": "npm run shaders --workspace @spacexr/3d-tiles-babylon",
+        "shaders:watch": "npm run shaders:watch --workspace @spacexr/3d-tiles-babylon",
+        "build": "npm run build --workspaces --if-present",
+        "clean": "npm run clean --workspaces --if-present",
+        "typecheck": "npm run typecheck --workspaces --if-present",
+        "test": "npm run test --workspaces --if-present",
+        "lint": "npm run lint --workspaces --if-present",
+        "lint:fix": "npm run lint:fix --workspaces --if-present",
+        "format": "npm run format --workspaces --if-present",
+        "format:fix": "npm run format:fix --workspaces --if-present",
+        "example:implicit-grid": "npm run dev --workspace @spacexr/example-babylon-implicit-grid-mapzen",
+        "example:implicit-grid:preview": "npm run preview --workspace @spacexr/example-babylon-implicit-grid-mapzen",
+        "example:google-3d-tiles": "npm run dev --workspace @spacexr/example-babylon-google-3d-tiles",
+        "example:google-3d-tiles:preview": "npm run preview --workspace @spacexr/example-babylon-google-3d-tiles",
+        "check": "npm run build && npm run format && npm run lint && npm run typecheck && npm run test",
+        "bench:terrain": "npm run bench:terrain --workspace @spacexr/3d-tiles-babylon-tools --",
+        "compare:renderers": "npm run compare:renderers --workspace @spacexr/3d-tiles-babylon-tools --",
+        "framework:install": "node scripts/framework.mjs install",
+        "framework:build": "node scripts/framework.mjs build",
+        "framework:check": "node scripts/framework.mjs check",
+        "framework:verify": "node --experimental-import-meta-resolve scripts/verify-framework.mjs",
+        "example:earth": "npm run open --workspace @spacexr/example-babylon-earth",
+        "example:earth:preview": "npm run preview --workspace @spacexr/example-babylon-earth",
+        "example:earth:orbit": "npm run dev --workspace @spacexr/example-babylon-earth -- --open /orbital.html",
+        "example:earth:atmosphere": "npm run dev --workspace @spacexr/example-babylon-earth -- --open /atmosphere.html",
+        "example:vectors": "npm run dev --workspace @spacexr/example-babylon-vector-terrain",
+        "example:vectors:preview": "npm run preview --workspace @spacexr/example-babylon-vector-terrain",
+        "test:earth:motion": "npm run test:motion --workspace @spacexr/example-babylon-earth",
+        "test:earth:gpu": "npm run test:gpu --workspace @spacexr/example-babylon-earth",
+        "test:earth:visual": "npm run test:visual --workspace @spacexr/example-babylon-earth",
+        "test:earth:native": "npm run test:native --workspace @spacexr/example-babylon-earth",
+        "test:earth:views": "npm run test:views --workspace @spacexr/example-babylon-earth"
+    },
+    "dependencies": {
+        "@spacexr/3d-tiles-core": "file:../3d-tiles-core/node/packages/core",
+        "@spacexr/3d-tiles-runtime": "file:../3d-tiles-core/node/packages/runtime",
+        "@spacexr/dem": "file:../terrain-core/packages/dem",
+        "@spacexr/grid": "file:../terrain-core/packages/grid",
+        "@spacexr/raster": "file:../terrain-core/packages/raster",
+        "@spacexr/tiles": "file:../3d-tiles-core/node/packages/tiles",
+        "@spacexr/celestial-core": "file:../celestial-core",
+        "@spacexr/atmosphere": "file:../atmosphere-core",
+        "@spacexr/vector": "file:../terrain-core/packages/vector",
+        "@spacexr/ocean": "file:../ocean-core"
+    }
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <link rel="icon" href="data:," />
+        <title>SpaceXR Terre</title>
+    </head>
+    <body>
+        <canvas id="earth"></canvas>
+        <section id="render-hud" aria-label="Mesure du rendu">
+            <output id="fps" aria-label="Images par seconde">... FPS</output>
+            <label><input id="atmosphere" type="checkbox" checked /> Atmosphère</label>
+            <output id="atmosphere-state">ON</output>
+        </section>
+        <aside>
+            <h1>Terre</h1>
+            <p id="status">Initialisation...</p>
+            <nav>
+                <button id="orbit">Orbite</button><button id="horizon">Horizon orbital</button><button id="terrain">Atmosphère</button>
+            </nav>
+            <label
+                >Heure UTC <input id="hour" type="range" min="0" max="23.983333" step="0.016667" value="12" /><output id="time"
+                    >12:00</output
+                ></label
+            >
+            <button id="sunset">Coucher de soleil</button>
+            <label>Exposition <input id="exposure" type="range" min="1" max="30" value="4" /></label>
+            <p>Glisser pour naviguer, molette pour zoomer.</p>
+            <p id="attribution"></p>
+            <p id="stats"></p>
+        </aside>
+        <script type="module" src="/src/orbital.ts"></script>
+    </body>
+</html>
