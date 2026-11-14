@@ -14,16 +14,25 @@ jobs:
           path: spacexr-rendering
       - uses: actions/checkout@v7
         with:
+          repository: pandaGaume/spacexr-tiling
+          path: spacexr-tiling
+      - uses: actions/checkout@v7
+        with:
           repository: pandaGaume/3d-tiles-core
           path: 3d-tiles-core
       - uses: actions/setup-node@v5
         with:
           node-version: 22.x
+      - name: Build spacexr-tiling
+        working-directory: spacexr-tiling
+        run: |
+          npm ci
+          npm run build
       - name: Build core
         working-directory: 3d-tiles-core/node
         run: |
           npm ci
-          npm run build --workspace @spacexr/3d-tiles-core --workspace @spacexr/tiles --workspace @spacexr/3d-tiles-runtime
+          npm run build --workspace @spacexr/3d-tiles-core --workspace @spacexr/3d-tiles-runtime
       - uses: actions/checkout@v7
         with:
           repository: pandaGaume/terrain-core

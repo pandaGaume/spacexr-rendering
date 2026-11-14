@@ -2,7 +2,7 @@
 
 ## Generic foundation
 
-`3d-tiles-core` owns wire contracts, tile addressing, generic surface mathematics and the single 3D Tiles runtime. `terrain-core` owns raster and DEM data, grid geometry and sampling. `spacexr-rendering/packages/core` owns the existing Babylon integration. The current generic framework has no cube projection, body catalogue, lunar production tools, provider URL presets or implicit Earth selection.
+`spacexr-tiling` owns tile addressing, topologies, generic surface mathematics and the tiling schemes, the cube included. `3d-tiles-core` owns wire contracts and the single 3D Tiles runtime. `terrain-core` owns raster and DEM data, grid geometry and sampling. `spacexr-rendering/packages/core` owns the existing Babylon integration. The current generic framework has no body catalogue, lunar production tools, provider URL presets or implicit Earth selection.
 
 The application supplies a `GeodeticSystem`, surface/tiling and source metrics. Geometry uses these inputs without selecting a body. Datum transformations, geoid models or fallback height envelopes must also be explicit. Geodetic coordinate/CRS definitions remain mathematical and wire-format contracts, separate from a body's physical catalogue.
 

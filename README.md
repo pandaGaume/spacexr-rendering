@@ -4,7 +4,8 @@ The working Babylon 3D Tiles and terrain framework, recomposed into its new repo
 
 | Repository          | Packages                                                                      |
 | ------------------- | ----------------------------------------------------------------------------- |
-| `3d-tiles-core`     | `@spacexr/3d-tiles-core`, `@spacexr/tiles`, `@spacexr/3d-tiles-runtime`       |
+| `spacexr-tiling`    | `@spacexr/tiles`                                                              |
+| `3d-tiles-core`     | `@spacexr/3d-tiles-core`, `@spacexr/3d-tiles-runtime`                         |
 | `terrain-core`      | `@spacexr/raster`, `@spacexr/dem`, `@spacexr/grid`                            |
 | `spacexr-rendering` | `@spacexr/3d-tiles-babylon`, private shader/benchmark tools and both examples |
 

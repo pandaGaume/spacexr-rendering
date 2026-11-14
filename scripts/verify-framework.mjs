@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const owners = {
     "@spacexr/3d-tiles-core": "../3d-tiles-core/node/packages/core",
-    "@spacexr/tiles": "../3d-tiles-core/node/packages/tiles",
+    "@spacexr/tiles": "../spacexr-tiling/packages/tiles",
     "@spacexr/3d-tiles-runtime": "../3d-tiles-core/node/packages/runtime",
     "@spacexr/raster": "../terrain-core/packages/raster",
     "@spacexr/dem": "../terrain-core/packages/dem",
