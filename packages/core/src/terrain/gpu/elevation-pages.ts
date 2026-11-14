@@ -4,8 +4,8 @@ import type { ITileAddress } from "@spacexr/3d-tiles-runtime";
 import type { DemPyramid } from "@spacexr/dem";
 import { sampleRasterBilinear } from "@spacexr/raster";
 import { tileAddressKey as key, TILE_EDGE_NEIGHBORS, TileNeighbor, turnedTileCoordinates } from "@spacexr/tiles";
+import { type ITerrainTiling } from "@spacexr/terrain-tileset";
 import { TextureArrayPool } from "../../raster/texture-array-pool";
-import { type ITerrainTiling } from "../terrain-tiling";
 
 /** Point DEM with a one-sample gutter, so central differences agree on shared page edges. */
 export function elevationPageTexels(pyramid: DemPyramid, address: ITileAddress, size: number, tiling: ITerrainTiling): Float32Array {

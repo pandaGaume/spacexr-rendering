@@ -7,7 +7,8 @@ import { ResidentTiles, TileNeighbor, type ITileAddress } from "@spacexr/tiles";
 import { afterEach, describe, expect, it, vi } from "vitest";
 const FIXTURE_SYSTEM = FixtureGeodeticSystem.WGS84;
 
-import { BabylonGeodesicGridPipeline, webMercatorTiling, type IBabylonGeodesicGridHandle } from "../src";
+import { webMercatorTiling } from "@spacexr/terrain-tileset";
+import { BabylonGeodesicGridPipeline, type IBabylonGeodesicGridHandle } from "../src";
 import { MeshRasterDrape } from "../src/draping/mesh/mesh-raster-drape";
 import type { BabylonRasterPages } from "../src/raster/raster-pages";
 import { TextureArrayPool } from "../src/raster/texture-array-pool";

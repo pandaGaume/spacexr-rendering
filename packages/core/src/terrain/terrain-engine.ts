@@ -1,12 +1,12 @@
 import type { Scene } from "@babylonjs/core/scene.js";
 
 import type { IEcefSpatialState, ITileActivationAdapter, ITilePresentationAdapter } from "@spacexr/3d-tiles-runtime";
+import { type ITerrainTiling } from "@spacexr/terrain-tileset";
 import type { IBabylonTileResourceStatisticsProvider } from "../monitor/runtime-monitor";
 import type { BabylonRasterPages } from "../raster/raster-pages";
 
 import type { JunctionPolicy } from "./displayed-tiles";
 import type { EdgeHeightPolicy, IGridElevationOptions } from "./mesh/geodesic-grid-pipeline";
-import type { ITerrainTiling } from "./terrain-tiling";
 
 /**
  * What every terrain engine receives. The terrain runtime, the DEM pyramid,

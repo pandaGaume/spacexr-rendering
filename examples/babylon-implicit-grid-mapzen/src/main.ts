@@ -7,7 +7,12 @@ const TILE_METRICS = new WebMercatorTileMetrics(
     SAMPLE_SYSTEM,
 );
 
-import { webMercatorTiling } from "@spacexr/3d-tiles-babylon";
+import {
+    createGeodesicGridSource,
+    metadataTileAddress,
+    webMercatorTiling,
+} from "@spacexr/terrain-tileset";
+import { WebMercatorTileMetrics } from "@spacexr/tiles";
 import { SAMPLE_SYSTEM } from "../../shared/earth";
 import {
     createMapzenNormalsSource,
@@ -27,11 +32,9 @@ import {
     GpuTerrainEngine,
     MeshTerrainEngine,
     TERRAIN_CONFIG,
-    createGeodesicGridSource,
     createGeospatialCamera,
     createGeospatialRendererEngine,
     createGeospatialScene,
-    metadataTileAddress,
     type IBabylonRasterPage,
     type IGridElevationOptions,
     type ITerrainEngine,
@@ -42,7 +45,6 @@ import {
     EcefSpatialMetric,
     TileRuntime,
     VerticalScale,
-    WebMercatorTileMetrics,
     type IEcefCameraFrame,
     type IEcefSpatialState,
     type IRuntimeAdapter,

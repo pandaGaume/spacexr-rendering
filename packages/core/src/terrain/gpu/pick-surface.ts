@@ -7,8 +7,7 @@ import type { ITileAddress } from "@spacexr/3d-tiles-runtime";
 import type { DemPyramid } from "@spacexr/dem";
 import { createGridTopology, type IGridTopology } from "@spacexr/grid";
 import { tileAddressKey as key } from "@spacexr/tiles";
-
-import type { ITerrainTiling } from "../terrain-tiling";
+import { type ITerrainTiling } from "@spacexr/terrain-tileset";
 
 /**
  * Surface the camera picks when the terrain is displaced on the GPU: one coarse grid per presented terrain tile,

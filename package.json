@@ -59,6 +59,7 @@
         "@spacexr/dem": "file:../terrain-core/packages/dem",
         "@spacexr/grid": "file:../terrain-core/packages/grid",
         "@spacexr/raster": "file:../terrain-core/packages/raster",
+        "@spacexr/terrain-tileset": "file:../terrain-core/packages/terrain-tileset",
         "@spacexr/tiles": "file:../spacexr-tiling/packages/tiles",
         "@spacexr/celestial-core": "file:../celestial-core",
         "@spacexr/atmosphere": "file:../atmosphere-core",

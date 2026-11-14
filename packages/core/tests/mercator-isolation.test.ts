@@ -2,8 +2,7 @@ import { GeodeticSystem as FixtureGeodeticSystem, GeodeticSystem } from "@spacex
 import { describe, expect, it } from "vitest";
 const FIXTURE_SYSTEM = FixtureGeodeticSystem.WGS84;
 
-import { webMercatorTiling } from "../src";
-import { tileCenterEcef, tileCenterLongitude, webMercatorLatitude } from "../src/terrain/gpu/grid-shapes";
+import { tileCenterEcef, tileCenterLongitude, webMercatorLatitude, webMercatorTiling } from "@spacexr/terrain-tileset";
 import { instancedGridPixelShader } from "../src/terrain/gpu/shaders/instancedGrid.fragment";
 import { instancedGridVertexShader } from "../src/terrain/gpu/shaders/instancedGrid.vertex";
 

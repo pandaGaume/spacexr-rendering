@@ -19,13 +19,13 @@ import type {
 import { DrapeInstanceCut, type IDrapeInstance } from "@spacexr/raster";
 import { tileAddressKey as key } from "@spacexr/tiles";
 
+import { type ITerrainTiling } from "@spacexr/terrain-tileset";
 import type { IBabylonTileResourceStatistics } from "../../monitor/runtime-monitor";
 import type { BabylonRasterPages } from "../../raster/raster-pages";
 import { sharedVerticalScale } from "../mesh/geodesic-grid-pipeline";
 import { TERRAIN_CONFIG } from "../terrain-config";
 import type { ITerrainEngine, ITerrainEngineInputs } from "../terrain-engine";
 import { regionWithHeights, tileIdentity, tileRegion } from "../terrain-tile";
-import { type ITerrainTiling } from "../terrain-tiling";
 import { terrainBodyFrame } from "./body-frame";
 import { ElevationPages } from "./elevation-pages";
 import { GpuRasterDrape } from "./gpu-raster-drape";
