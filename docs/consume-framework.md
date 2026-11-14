@@ -1,6 +1,6 @@
 # Use the framework in another application
 
-Keep the application next to `3d-tiles-core`, `terrain-core` and `spacexr-rendering`. Build the framework once from `spacexr-rendering` with `npm run framework:build`. The current reference examples are the fastest working starting point; copy application code into your own project and keep the framework packages linked.
+Keep the application next to `spacexr-tiling`, `3d-tiles-core`, `terrain-core` and `spacexr-rendering`. Build the framework once from `spacexr-rendering` with `npm run framework:build`. The current reference examples are the fastest working starting point; copy application code into your own project and keep the framework packages linked.
 
 ## Local dependencies
 
@@ -13,7 +13,7 @@ Use this dependency block in the sibling application's package.json. The Babylon
     "@babylonjs/loaders": "9.33.1",
     "@spacexr/geodesy": "0.4.0",
     "@spacexr/3d-tiles-core": "file:../3d-tiles-core/node/packages/core",
-    "@spacexr/tiles": "file:../3d-tiles-core/node/packages/tiles",
+    "@spacexr/tiles": "file:../spacexr-tiling/packages/tiles",
     "@spacexr/3d-tiles-runtime": "file:../3d-tiles-core/node/packages/runtime",
     "@spacexr/raster": "file:../terrain-core/packages/raster",
     "@spacexr/dem": "file:../terrain-core/packages/dem",

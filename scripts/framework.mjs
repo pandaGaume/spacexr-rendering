@@ -5,6 +5,7 @@ const action = process.argv[2];
 if (!["install", "build", "check"].includes(action))
     throw new Error("Use install, build or check.");
 const repositories = [
+    "../../spacexr-tiling/",
     "../../3d-tiles-core/node/",
     "../../terrain-core/",
     "../../quantia/",
