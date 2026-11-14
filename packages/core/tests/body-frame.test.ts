@@ -3,10 +3,10 @@ import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector.j
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode.js";
 import { GeodeticSystem as FixtureGeodeticSystem } from "@spacexr/geodesy";
 import { describe, expect, it } from "vitest";
+import { webMercatorTiling } from "@spacexr/terrain-tileset";
 import { terrainBodyFrame } from "../src/terrain/gpu/body-frame";
 import { PickSurface } from "../src/terrain/gpu/pick-surface";
 import { instancedGridVertexShader } from "../src/terrain/gpu/shaders/instancedGrid.vertex";
-import { webMercatorTiling } from "../src/terrain/terrain-tiling";
 import { createNullScene } from "./helpers";
 const FIXTURE_SYSTEM = FixtureGeodeticSystem.WGS84;
 

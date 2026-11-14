@@ -36,7 +36,6 @@ import "@babylonjs/loaders/glTF/2.0/index.js";
 | `GpuTerrainEngine`                                               | Terrain engine instancing predefined grids, sized and placed per instance, heights read on the GPU       |
 | `ITerrainEngine`, `MeshTerrainEngine`                            | Interchangeable terrain engines; the mesh engine builds one CPU mesh per tile, draped with imagery pages |
 | `TERRAIN_CONFIG`                                                 | Settings of the terrain, read from `terrain-config.json`: change them there, not in the code             |
-| `createGeodesicGridSource`, `TILE_METRICS`                       | Implicit Web Mercator quadtree of terrain tiles, with height ranges prepared by a DEM pyramid            |
 | `DisplayedTiles`                                                 | Last known cut of a quadtree: levels across each tile edge, kept through tiles leaving the view          |
 | `registerFeatureMetadataLoaders` (entry `/gltf-features`)        | Registers the loaders of `EXT_mesh_features`, `EXT_instance_features` and `EXT_structural_metadata`      |
 | `getMeshFeature`, `getInstanceFeature`, `findStructuralMetadata` | The feature of a picked face or instance, with its row of the property table                             |
@@ -153,4 +152,4 @@ Apache-2.0.
 
 ## Explicit physical configuration
 
-`createGeospatialCamera` and `EcefSpatialMetric` require a geodetic system. Terrain engines and pipelines require an explicit tiling. `createGeodesicGridSource` requires source metrics. There is no exported `TILE_METRICS` default. Provider presets are sample configuration. See [the layer architecture](../../docs/architecture.md) and [the adapted standalone examples](../../examples/).
+`createGeospatialCamera` and `EcefSpatialMetric` require a geodetic system. Terrain engines and pipelines require an explicit tiling. Tilings and grid sources (`webMercatorTiling`, `cubeTiling`, `createGeodesicGridSource`, `createCubeGridSource`) come from `@spacexr/terrain-tileset` in terrain-core; `createGeodesicGridSource` requires source metrics. There is no exported `TILE_METRICS` default. Provider presets are sample configuration. See [the layer architecture](../../docs/architecture.md) and [the adapted standalone examples](../../examples/).

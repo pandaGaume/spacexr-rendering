@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const FIXTURE_SYSTEM = FixtureGeodeticSystem.WGS84;
 const TILE_METRICS = new FixtureTileMetrics({ minLOD: 3, maxLOD: 18, tileSize: 64 }, FIXTURE_SYSTEM);
 
-import { createGeodesicGridSource } from "../src/terrain/grid-source";
+import { createGeodesicGridSource } from "@spacexr/terrain-tileset";
 import { projectGridTopologyToEllipsoid } from "../src/terrain/mesh/geodesic-grid-geometry";
 
 function distance(positions: readonly number[], firstVertex: number, secondVertex: number): number {

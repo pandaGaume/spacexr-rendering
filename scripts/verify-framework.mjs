@@ -10,6 +10,7 @@ const owners = {
     "@spacexr/dem": "../terrain-core/packages/dem",
     "@spacexr/grid": "../terrain-core/packages/grid",
     "@spacexr/vector": "../terrain-core/packages/vector",
+    "@spacexr/terrain-tileset": "../terrain-core/packages/terrain-tileset",
     "@spacexr/3d-tiles-babylon": "packages/core",
     "@spacexr/babylon-earth": "packages/babylon-earth",
     "@spacexr/celestial-core": "../celestial-core",

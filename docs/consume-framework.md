@@ -16,6 +16,7 @@ Use this dependency block in the sibling application's package.json. The Babylon
     "@spacexr/tiles": "file:../spacexr-tiling/packages/tiles",
     "@spacexr/3d-tiles-runtime": "file:../3d-tiles-core/node/packages/runtime",
     "@spacexr/raster": "file:../terrain-core/packages/raster",
+    "@spacexr/terrain-tileset": "file:../terrain-core/packages/terrain-tileset",
     "@spacexr/dem": "file:../terrain-core/packages/dem",
     "@spacexr/grid": "file:../terrain-core/packages/grid",
     "@spacexr/3d-tiles-babylon": "file:../spacexr-rendering/packages/core"

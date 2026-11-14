@@ -22,12 +22,12 @@ import { selectSurfaceLevels, type DemPyramid, type SurfaceLevelPolicy } from "@
 import { JunctionGridTopologyCache, SAME_EDGE_LODS, edgeLodsKey, type GridEdgeLods, type IGridTopology } from "@spacexr/grid";
 import { sampleRasterBilinear } from "@spacexr/raster";
 import { TileNeighbor, tileAddressKey } from "@spacexr/tiles";
+import { type ITerrainTiling } from "@spacexr/terrain-tileset";
 import type { MeshRasterDrape } from "../../draping/mesh/mesh-raster-drape";
 import type { IBabylonTileResourceStatistics, IBabylonTileResourceStatisticsProvider } from "../../monitor/runtime-monitor";
 import { DisplayedTiles, type JunctionPolicy } from "../displayed-tiles";
 import { TERRAIN_CONFIG } from "../terrain-config";
 import { regionWithHeights, tileIdentity, tileRegion } from "../terrain-tile";
-import { type ITerrainTiling } from "../terrain-tiling";
 import { composeElevatedPositions, projectElevatedGrid, type IElevatedGridGeometry } from "./geodesic-grid-geometry";
 
 const LOD_COLORS = ["#2f80ed", "#00c2ff", "#12b886", "#ffd43b", "#ff922b", "#fa5252", "#cc5de8", "#845ef7"] as const;

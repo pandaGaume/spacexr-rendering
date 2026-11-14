@@ -4,7 +4,8 @@ import { type ITileAddress } from "@spacexr/tiles";
 import { afterEach, describe, expect, it, vi } from "vitest";
 const FIXTURE_SYSTEM = FixtureGeodeticSystem.WGS84;
 
-import { BabylonGeodesicGridPipeline, webMercatorTiling, type IBabylonGeodesicGridHandle } from "../src";
+import { webMercatorTiling } from "@spacexr/terrain-tileset";
+import { BabylonGeodesicGridPipeline, type IBabylonGeodesicGridHandle } from "../src";
 import { createNullScene } from "./helpers";
 
 const SIDE = 257;

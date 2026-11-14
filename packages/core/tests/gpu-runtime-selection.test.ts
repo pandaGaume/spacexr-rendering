@@ -2,9 +2,9 @@ import { Observable } from "@babylonjs/core/Misc/observable.js";
 import { GeodeticSystem as FixtureGeodeticSystem } from "@spacexr/geodesy";
 import { ResidentTiles, type ITileAddress } from "@spacexr/tiles";
 import { describe, expect, it, vi } from "vitest";
-import { webMercatorTiling as FixtureTiling } from "../src/terrain/terrain-tiling";
 const FIXTURE_SYSTEM = FixtureGeodeticSystem.WGS84;
 
+import { webMercatorTiling as FixtureTiling } from "@spacexr/terrain-tileset";
 import type { BabylonRasterPages } from "../src/raster/raster-pages";
 import { GpuRasterDrape } from "../src/terrain/gpu/gpu-raster-drape";
 import { GpuTerrainEngine } from "../src/terrain/gpu/gpu-terrain-engine";
