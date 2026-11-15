@@ -73,6 +73,9 @@ export interface IBenchIntegrity {
     frames: number;
     framesWithHoles: number;
     worstHoles: number;
+    /** Visible drawn tiles replaced by one of their ancestors from one frame to the next, over the path. */
+    levelDrops?: number;
+    framesWithDrops?: number;
     edgeChecks: number;
     sharedVerticesPerCheck: number;
     /** Largest gap between shared vertices in the view: it can be seen. */
@@ -127,6 +130,9 @@ const COLUMNS: ReadonlyArray<readonly [string, (result: IBenchResult) => number 
     ["distinct", (r) => r.performance?.distinctTileRequests, true],
     ["load s", (r) => r.performance?.loadSeconds, true],
     ["holes", (r) => r.integrity?.worstHoles, true],
+    ["hole frames", (r) => r.integrity?.framesWithHoles, true],
+    ["drops", (r) => r.integrity?.levelDrops, true],
+    ["drop frames", (r) => r.integrity?.framesWithDrops, true],
     ["edge m", (r) => r.integrity?.worstSharedEdgeMetres, true],
     ["edge m, all", (r) => r.integrity?.worstOutOfViewEdgeMetres, true],
     ["edge m, rest", (r) => r.integrity?.worstSharedEdgeAtRestMetres, true],

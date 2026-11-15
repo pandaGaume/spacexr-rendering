@@ -546,8 +546,26 @@ window.__TERRAIN_BENCH__ = (() => {
         // A probe that sees nothing proves nothing: 100 m added to one shared vertex must come out.
         const probeDetects = terrain.placed ? gpuSharedEdges(terrain, 100).worst >= 99 : true;
         let scaleSum = 0;
+        // A level drop: a tile visible and drawn at the frame before, replaced by one of its ancestors at this frame.
+        const { runtime: dropRuntime } = example();
+        let drawnBefore = new Set();
+        let levelDrops = 0;
+        let framesWithDrops = 0;
         await fly(path, seconds, () => {
             frames++;
+            const drawn = new Set(dropRuntime.selectedTiles);
+            let drops = 0;
+            for (const tile of drawnBefore) {
+                if (drawn.has(tile) || !tile.visible) continue;
+                for (let parent = tile.parent; parent; parent = parent.parent)
+                    if (drawn.has(parent)) {
+                        drops++;
+                        break;
+                    }
+            }
+            if (drops > 0) framesWithDrops++;
+            levelDrops += drops;
+            drawnBefore = new Set([...drawn].filter((tile) => tile.visible));
             scaleSum += example().motionScale?.scale ?? 1;
             const holes = countHoles();
             if (holes > 0) framesWithHoles++;
@@ -603,6 +621,8 @@ window.__TERRAIN_BENCH__ = (() => {
             frames,
             framesWithHoles,
             worstHoles,
+            levelDrops,
+            framesWithDrops,
             edgeChecks,
             sharedVerticesPerCheck: Math.round(sharedVertices / Math.max(1, edgeChecks)),
             worstSharedEdgeMetres: round(worstVisibleEdge, 3),
