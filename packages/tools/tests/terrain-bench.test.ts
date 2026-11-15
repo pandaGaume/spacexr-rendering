@@ -32,9 +32,11 @@ const report = (label: string, ...results: IBenchResult[]): IBenchReport => ({ l
 
 describe("bench scenarios", () => {
     it("runs every view on every engine, under unique ids", () => {
-        const scenarios = benchScenarios("http://localhost:5174/");
+        const scenarios = benchScenarios("http://localhost:5174/", "http://127.0.0.1:8794/moon");
         const mercator = BENCH_VIEWS.filter((view) => view.projection === "mercator").length;
         expect(scenarios).toHaveLength(mercator * BENCH_ENGINES.length + (BENCH_VIEWS.length - mercator));
+        // Without a dataset, only Web Mercator: there is no synthetic body.
+        expect(benchScenarios("http://localhost:5174/")).toHaveLength(mercator * BENCH_ENGINES.length);
         expect(new Set(scenarios.map((scenario) => scenario.id)).size).toBe(scenarios.length);
     });
 
@@ -51,7 +53,6 @@ describe("bench scenarios", () => {
         expect(cube.url).toContain("http://localhost:5176/?dataset=http://127.0.0.1:8793&solid=1&");
         expect(scenarios.some((scenario) => scenario.id === "pole/mesh")).toBe(false);
         expect(scenarios.find((scenario) => scenario.id === "mont-blanc/gpu")!.url).toContain("http://localhost:5174/?engine=gpu&");
-        expect(benchScenarios("http://localhost:5174").find((scenario) => scenario.id === "pole/gpu")!.url).not.toContain("dataset");
     });
 });
 

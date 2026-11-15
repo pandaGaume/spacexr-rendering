@@ -2,7 +2,7 @@
     "name": "@spacexr/example-babylon-moon",
     "version": "0.1.0",
     "private": true,
-    "description": "Standalone Moon on the cube index, from a tile service or a synthetic DEM.",
+    "description": "Standalone Moon on the cube index, from a tile service.",
     "type": "module",
     "license": "Apache-2.0",
     "engines": {

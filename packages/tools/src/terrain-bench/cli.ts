@@ -23,7 +23,7 @@ Flies fixed camera paths in headless Chrome over the implicit grid example (Web 
 
   --url <address>      Address of the implicit grid example. Defaults to http://localhost:5174
   --moon-url <address> Address of the Moon example. Defaults to http://localhost:5176
-  --dataset <address>  Tile service for the cube. Defaults to the synthetic Moon
+  --dataset <address>  Folder of a Moon revision of a tile service. The cube paths run only with it
   --browser <path>     Chrome or Chromium. Defaults to the usual locations
   --only <pattern>     Scenarios whose id matches this regular expression
   --seconds <n>        Length of each path. Defaults to 8
