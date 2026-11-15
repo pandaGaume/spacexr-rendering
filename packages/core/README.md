@@ -86,7 +86,7 @@ Property tables are read for strings, booleans, scalars and enums that are not a
 
 `createGeospatialRendererEngine(canvas, "webgpu")` creates that engine where the browser supports WebGPU and a WebGL engine otherwise, and reports which one it created. Support is checked before the canvas is bound, since a canvas holding a WebGPU context can no longer hold a WebGL one. The WebGPU engine requests the maximum limits of the adapter: WebGPU only guarantees 256 texture array layers.
 
-On that engine, the GPU terrain engine and the imagery drape of the mesh engine run their WGSL shaders, except the GPU terrain of a tiling with radial heights, such as the cube, whose GLSL shaders Babylon converts, the twins of their GLSL shaders under `shaders/wgsl`, which compute the same values in the same order. The materials of Babylon.js, such as the standard material of the mesh engine, run the WGSL of Babylon.js. The code of this package specific to that engine creates it, selects the WGSL shaders, writes and copies texture array layers, and registers its frame timing. `TextureArrayPool` writes single layers with `texSubImage3D` on WebGL 2 and with Babylon's texture helper on WebGPU, where growing the array also copies float layers. The GPU terrain engine interleaves its instance attributes in one vertex buffer: WebGPU devices may bind only 8 vertex buffers to a pipeline.
+On that engine, the GPU terrain engine and the imagery drape of the mesh engine run their WGSL shaders, radial heights of the cube included, the twins of their GLSL shaders under `shaders/wgsl`, which compute the same values in the same order. The materials of Babylon.js, such as the standard material of the mesh engine, run the WGSL of Babylon.js. The code of this package specific to that engine creates it, selects the WGSL shaders, writes and copies texture array layers, and registers its frame timing. `TextureArrayPool` writes single layers with `texSubImage3D` on WebGL 2 and with Babylon's texture helper on WebGPU, where growing the array also copies float layers. The GPU terrain engine interleaves its instance attributes in one vertex buffer: WebGPU devices may bind only 8 vertex buffers to a pipeline.
 
 ```ts
 const { engine, renderer } = await createGeospatialRendererEngine(canvas, "webgpu");
@@ -145,12 +145,14 @@ GPU frame time requires GPU timer queries. The monitor registers the time query 
 `GpuTerrainEngine` renders any tiling. `ITerrainTiling` tells it where tiles lie and how they connect: `webMercatorTiling` by default, `cubeTiling` for a whole body on the cube index, poles included. `createCubeGridSource` builds the implicit quadtrees of the six faces. On the cube, heights are radial, the DEM of a tile on another face is read turned, and normals are computed at each pixel from the DEM. `MeshTerrainEngine` renders Web Mercator only.
 
 ```ts
-import { createCubeGridSource, cubeTiling, GpuTerrainEngine } from "@spacexr/3d-tiles-babylon";
-import { CUBE_TILE_TOPOLOGY, CubeTileSurface, ReferenceSurface } from "@spacexr/tiles";
+import { GpuTerrainEngine } from "@spacexr/3d-tiles-babylon";
+import { createCubeGridSource, cubeTiling } from "@spacexr/terrain-tileset";
+import { CUBE_TILE_TOPOLOGY, CubeTileSurface } from "@spacexr/tiles/cube";
+import { ReferenceSurface } from "@spacexr/tiles/surface";
 
 const surface = new CubeTileSurface(ReferenceSurface.sphere(1737400));
 // The geometric error of terrain tiles follows the cells of the grid.
-const source = createCubeGridSource(surface, prepared, { maxLOD: 14, tileSize: 16 });
+const source = createCubeGridSource(surface, prepared, { maxLOD: 14, tileSize: 64 });
 const terrain = new GpuTerrainEngine({ ...inputs, tiling: cubeTiling(surface) });
 // Balance the runtime across faces: quadtreeBalance: { topology: CUBE_TILE_TOPOLOGY }
 ```

@@ -103,8 +103,8 @@ interface IPlacedInstance {
  * balances its instances, and reads their reference-surface shapes from texture arrays. Both paths use the same
  * activation and presentation ports and keep elevation sources independent of geometric tile addresses.
  *
- * Its shaders are written twice, in GLSL for WebGL and in WGSL for WebGPU, and compute the same values. The WGSL ones
- * have no radial heights yet: on WebGPU, a tiling with radial heights runs the GLSL ones, converted by Babylon.
+ * Its shaders are written twice, in GLSL for WebGL and in WGSL for WebGPU, and compute the same values, radial heights
+ * included.
  */
 export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
     public readonly name = "gpu";
@@ -190,7 +190,7 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
             this.root,
         );
 
-        const wgsl = this.scene.getEngine().isWebGPU && !this.tiling.radialHeights;
+        const wgsl = this.scene.getEngine().isWebGPU;
         this.material = new ShaderMaterial(
             "gpu-terrain",
             this.scene,
