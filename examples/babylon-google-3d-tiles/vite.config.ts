@@ -63,7 +63,7 @@ export default defineConfig(({ command, mode }) => {
             port: 5173,
             // Reload the packages linked from 3d-tiles-core when they are rebuilt.
             watch: { ignored: ["!**/node_modules/@spacexr/**"] },
-            open: true,
+            open: false,
             proxy,
         },
         preview: {

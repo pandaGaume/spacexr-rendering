@@ -7,7 +7,7 @@ import { createEcefCameraFrame } from "../src/spatial/camera-frame";
 
 const FOV = Math.PI / 3;
 
-function frame(frustumMargin?: number) {
+function frame(frustumMargin?: number, radius?: number) {
     const view = Matrix.LookAtLH(Vector3.Zero(), new Vector3(0, 0, 1), Vector3.Up());
     const projection = Matrix.PerspectiveFovLH(FOV, 1, 1, 10000);
     const camera = {
@@ -15,6 +15,7 @@ function frame(frustumMargin?: number) {
         globalPosition: Vector3.Zero(),
         viewport: { height: 1 },
         fov: FOV,
+        ...(radius === undefined ? {} : { radius }),
         getViewMatrix: () => view,
         getProjectionMatrix: () => projection,
         getTransformationMatrix: () => view.multiply(projection),
@@ -45,6 +46,24 @@ describe("createEcefCameraFrame", () => {
         expect(inside(planes, 1.2 * half, 1000)).toBe(true);
         expect(inside(planes, -1.2 * half, 1000)).toBe(true);
         expect(inside(planes, 1.3 * half, 1000)).toBe(false);
+    });
+
+    it("gives the periphery the same margin at every depth for a camera orbiting a target", () => {
+        // The camera orbits a target 1000 away: the margin is a quarter of the half view there, everywhere.
+        const margin = 0.25 * half;
+        const planes = frame(0.25, 1000).peripheryFrustumPlanes;
+        const visible = frame(0.25, 1000).frustumPlanes;
+        // At the target, as before.
+        expect(inside(planes, half + (0.9 * margin) / Math.cos(FOV / 2), 1000)).toBe(true);
+        expect(inside(planes, half + (1.1 * margin) / Math.cos(FOV / 2), 1000)).toBe(false);
+        // Close to the camera, beside the view and behind the near plane: the ground the camera turns onto.
+        const near = 20 * Math.tan(FOV / 2);
+        expect(inside(visible, near + 0.5 * margin, 20)).toBe(false);
+        expect(inside(planes, near + 0.5 * margin, 20)).toBe(true);
+        expect(inside(planes, 0, -0.5 * margin)).toBe(true);
+        expect(inside(planes, 0, -1.1 * margin)).toBe(false);
+        // A projection widened alone has no margin there.
+        expect(inside(frame(0.25).peripheryFrustumPlanes, near + 0.5 * margin, 20)).toBe(false);
     });
 
     it("has no periphery without a margin", () => {
