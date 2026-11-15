@@ -10,6 +10,7 @@ import {
     BabylonRuntimeDriver,
     GpuTerrainEngine,
     MeshTerrainEngine,
+    TERRAIN_CONFIG,
     type ITerrainEngine,
     createGeospatialCamera,
     type IBabylonRasterPagesOptions,
@@ -22,6 +23,7 @@ import {
     DenseImplicitSubtreeLoader,
     EcefSpatialMetric,
     TileRuntime,
+    VerticalScale,
     type IEcefCameraFrame,
     type IEcefSpatialState,
     type IRuntimeAdapter,
@@ -38,6 +40,13 @@ export interface IEarthRuntimeOptions {
     /** Browser DOM layer for optional tile labels. An owned hidden layer is created when omitted. */
     labelLayer?: HTMLElement;
     date?: Date;
+    /**
+     * Fixed direction towards the Sun, a unit ECEF vector, such as a shaded-relief convention. When omitted, the Sun is
+     * the real one at `date`, which `setDate` moves.
+     */
+    sunDirection?: readonly [number, number, number];
+    /** Scale shared by every height of the scene, such as an exaggeration control. One is created when omitted. */
+    verticalScale?: VerticalScale;
     /** Static sea-level polar placeholders, outside Mercator coverage. Default true. */
     polarCaps?: boolean;
     terrain?: {
@@ -51,6 +60,8 @@ export interface IEarthRuntimeOptions {
         /** Child DEM height ranges prepared by the existing terrain chain. */
         preparedHeights?: IPreparedHeights;
         imagery?: IBabylonRasterPagesOptions;
+        /** Normal pages that light the relief apart from its geometry, such as the Mapzen normals. GPU engine only. */
+        normals?: IBabylonRasterPagesOptions;
     };
     onError?: (error: unknown) => void;
 }
@@ -60,9 +71,12 @@ export interface IEarthRuntime {
     readonly camera: Camera;
     readonly runtime: EarthTileRuntime;
     readonly terrain: ITerrainEngine;
+    readonly verticalScale: VerticalScale;
     /** Updates camera and tile selection before the caller's scene.render(false). Never starts a render loop. */
     update(): Promise<void>;
-    /** Moves the Sun to its direction at that date. */
+    /** Call after the caller's scene.render(false): the terrain engine finishes its frame. */
+    afterRender(): void;
+    /** Moves the Sun to its direction at that date, unless the Sun has a fixed direction. */
     setDate(date: Date): Promise<void>;
     /** Disposes owned resources, preserving the borrowed scene, engine and existingCamera. */
     dispose(): Promise<void>;
@@ -96,6 +110,9 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
     let ownedCamera: GeospatialCamera | undefined;
     let ownedLabels: HTMLElement | undefined;
     let pages: BabylonRasterPages | undefined;
+    let normalPages: BabylonRasterPages | undefined;
+    const verticalScale = options.verticalScale ?? new VerticalScale(1);
+    if (config.normals && config.engine === "mesh") throw new RangeError("Normal pages need the GPU terrain engine.");
     let polarCaps: ReturnType<typeof createPolarCaps> | undefined;
     let terrain: ITerrainEngine | undefined;
     let runtime: EarthTileRuntime | undefined;
@@ -114,6 +131,7 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
         terrain?.dispose();
         polarCaps?.dispose();
         pages?.dispose();
+        normalPages?.dispose();
         sunlight?.dispose();
         ambient?.dispose();
         if (scene.activeCamera === camera) scene.activeCamera = previousCamera;
@@ -138,13 +156,14 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             ownedLabels = document.createElement("div");
             ownedLabels.hidden = true;
         }
-        const direction = Vector3.FromArray(earthSunDirection(date));
+        const direction = Vector3.FromArray(options.sunDirection ?? earthSunDirection(date));
         sunlight = new DirectionalLight("earth-sun", direction.negate(), scene);
         sunlight.intensity = 1.5;
         ambient = new HemisphericLight("earth-ambient", Vector3.Up(), scene);
         ambient.intensity = 0.12;
         ambient.groundColor = new Color3(0.01, 0.015, 0.025);
         pages = config.imagery ? new BabylonRasterPages(scene, config.imagery) : undefined;
+        normalPages = config.normals ? new BabylonRasterPages(scene, config.normals) : undefined;
         const TerrainEngine = config.engine === "mesh" ? MeshTerrainEngine : GpuTerrainEngine;
         terrain = new TerrainEngine(
             {
@@ -157,8 +176,9 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
                 edgeHeights: "coarsest",
                 geometrySelection: "runtime",
                 tiling: webMercatorTiling(EARTH_SYSTEM),
-                ...(config.elevation ? { elevation: config.elevation } : {}),
+                ...(config.elevation ? { elevation: { ...config.elevation, verticalScale } } : {}),
                 ...(pages ? { imageryPages: pages } : {}),
+                ...(normalPages ? { normalPages } : {}),
             },
             { cells },
         );
@@ -184,8 +204,11 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             adapter: ports,
             maxScreenSpaceError: sse,
             quadtreeBalance: { wrapX: true },
-            maxConcurrentLoads: 8,
-            cache: { maxContentEntries: 256 },
+            verticalScale,
+            refinementHysteresisRatio: TERRAIN_CONFIG.selection.hysteresis,
+            coarseningDelayMilliseconds: TERRAIN_CONFIG.selection.coarseningDelayMilliseconds,
+            maxConcurrentLoads: TERRAIN_CONFIG.selection.maxConcurrentLoads,
+            cache: { maxContentEntries: TERRAIN_CONFIG.selection.contentCacheEntries },
             instrumentation: { enabled: true },
         });
         if (options.onError)
@@ -195,6 +218,8 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
         driver = new BabylonRuntimeDriver(runtime, scene, {
             camera,
             manual: true,
+            // The periphery of the view loads ahead of the camera, at every depth.
+            frustumMargin: TERRAIN_CONFIG.selection.frustumMargin,
             ...(options.onError ? { onError: options.onError } : {}),
         });
         await driver.start();
@@ -204,6 +229,7 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             camera,
             runtime,
             terrain,
+            verticalScale,
             update() {
                 if (disposed) return Promise.reject(new Error("Earth runtime is disposed."));
                 if (updating) return updating;
@@ -217,8 +243,12 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
                 });
                 return updating;
             },
+            afterRender() {
+                if (!disposed) terrain!.afterRender();
+            },
             async setDate(value) {
                 if (disposed) throw new Error("Earth runtime is disposed.");
+                if (options.sunDirection) return;
                 sunlight!.direction = Vector3.FromArray(earthSunDirection(new Date(value.getTime()))).negate();
             },
             dispose,

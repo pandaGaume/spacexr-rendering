@@ -43,7 +43,7 @@ requestAnimationFrame(() => void frame());
 
 The library creates no canvas, engine or render loop. Call `update` before beginning a Babylon frame, outside any open engine render pass. It owns its created camera, lights, terrain, imagery pages and labels. It borrows the scene, engine, optional existingCamera, supplied DEM and label layer. Await `dispose()` before destroying the scene or engine. It restores the previous active camera if its camera is still active. There is one actual TileRuntime instance, exposed as `earth.runtime`, and no independent imagery selector.
 
-`setDate(date)` moves the Sun to its Celestial geometric direction at that date. Runtime errors can be observed through `onError` and the underlying runtime events.
+`setDate(date)` moves the Sun to its Celestial geometric direction at that date; `sunDirection` fixes it instead, for example to a shaded-relief convention, and `setDate` then leaves it. `verticalScale` shares the scale of every height with the application, such as an exaggeration control. `terrain.normals` gives the GPU engine normal pages, such as the Mapzen normals, which light the relief apart from its geometry. Call `afterRender()` after `scene.render(false)`. Runtime errors can be observed through `onError` and the underlying runtime events.
 
 ## Scope
 
