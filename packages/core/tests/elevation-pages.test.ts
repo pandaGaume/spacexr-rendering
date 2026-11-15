@@ -1,7 +1,7 @@
 import { createHeightGrid, DemPyramid } from "@spacexr/dem";
 import { CUBE_TILE_TOPOLOGY, CubeTileSurface, ReferenceSurface, cubeTileDirection, TileNeighbor, type ITileAddress } from "@spacexr/tiles";
 import { describe, expect, it } from "vitest";
-import { cubeTiling } from "../src/terrain/terrain-tiling";
+import { cubeTiling } from "@spacexr/terrain-tileset";
 import { elevationPageTexels } from "../src/terrain/gpu/elevation-pages";
 
 const size = 17,

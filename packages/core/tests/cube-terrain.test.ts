@@ -12,9 +12,11 @@ import {
     type ICartesian3,
     type ITileAddress,
 } from "@spacexr/tiles";
+import { GeodeticSystem } from "@spacexr/geodesy";
+import { createCubeGridSource, cubeTiling, metadataTileAddress, webMercatorTiling } from "@spacexr/terrain-tileset";
 import { describe, expect, it } from "vitest";
 
-import { TERRAIN_CONFIG, TILE_METRICS, createCubeGridSource, cubeTiling, metadataTileAddress, webMercatorTiling } from "../src";
+import { TERRAIN_CONFIG } from "../src";
 import { instancedGridPixelShader } from "../src/terrain/gpu/shaders/instancedGrid.fragment";
 import { instancedGridVertexShader } from "../src/terrain/gpu/shaders/instancedGrid.vertex";
 
@@ -159,7 +161,7 @@ describe("terrain tilings", () => {
     it("bound cube tiles with boxes and keep regions on Web Mercator", () => {
         expect(cubeTiling(MOON).radialHeights).toBe(true);
         expect(cubeTiling(MOON).boundingBox?.({ face: 2, lod: 3, x: 1, y: 1 }, -10, 10)).toHaveLength(12);
-        const mercator = webMercatorTiling();
+        const mercator = webMercatorTiling(GeodeticSystem.WGS84);
         expect(mercator.radialHeights).toBe(false);
         expect(mercator.boundingBox).toBeUndefined();
         expect(mercator.topology.neighbor({ lod: 1, x: 0, y: 0 }, TileNeighbor.W)?.address).toEqual({ lod: 1, x: 1, y: 0 });
@@ -183,20 +185,15 @@ describe("terrain tilings", () => {
         }
     });
 
-    it("give a Web Mercator tile the error of the cells of its grid", () => {
-        expect(TILE_METRICS.tileSize).toBe(TERRAIN_CONFIG.grid.cells);
-    });
-
     it("give a cube tile the error of the cells of its grid", () => {
-        const errorWith = (tileSize?: number): number =>
-            createCubeGridSource(MOON, undefined, { maxLOD: 4, ...(tileSize === undefined ? {} : { tileSize }) }).tileset.geometricError;
+        const errorWith = (tileSize: number): number =>
+            createCubeGridSource(MOON, undefined, { maxLOD: 4, tileSize }).tileset.geometricError;
 
-        expect(errorWith()).toBe(errorWith(TERRAIN_CONFIG.grid.cells));
-        expect(errorWith(2 * TERRAIN_CONFIG.grid.cells)).toBeCloseTo(errorWith() / 2, 6);
+        expect(errorWith(2 * TERRAIN_CONFIG.grid.cells)).toBeCloseTo(errorWith(TERRAIN_CONFIG.grid.cells) / 2, 6);
     });
 
     it("build a grid source with the face in the metadata of its tiles", () => {
-        const { tileset, resolver } = createCubeGridSource(MOON, undefined, { maxLOD: 4 });
+        const { tileset, resolver } = createCubeGridSource(MOON, undefined, { maxLOD: 4, tileSize: TERRAIN_CONFIG.grid.cells });
         const north = tileset.root.children![4]!;
         expect(north.metadata?.properties).toEqual({ face: 4, lod: 0, x: 0, y: 0 });
         expect(metadataTileAddress({ id: "t", source: north })).toEqual({ face: 4, lod: 0, x: 0, y: 0 });

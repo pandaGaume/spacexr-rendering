@@ -1,7 +1,7 @@
+import { GeodeticSystem } from "@spacexr/geodesy";
+import { cubeTiling, webMercatorTiling } from "@spacexr/terrain-tileset";
 import { CubeTileSurface, ReferenceSurface } from "@spacexr/tiles";
 import { describe, expect, it } from "vitest";
-
-import { cubeTiling, webMercatorTiling } from "../src";
 
 describe("terrain cover", () => {
     it("covers the six faces of the cube", () => {
@@ -12,6 +12,6 @@ describe("terrain cover", () => {
     });
 
     it("leaves Web Mercator without a cover, which draws as before", () => {
-        expect(webMercatorTiling().coverRoots).toBeUndefined();
+        expect(webMercatorTiling(GeodeticSystem.WGS84).coverRoots).toBeUndefined();
     });
 });

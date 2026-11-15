@@ -1,16 +1,14 @@
 import { PerformanceConfigurator } from "@babylonjs/core/Engines/performanceConfigurator.js";
 import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector.js";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode.js";
-import { GeodeticSystem as FixtureGeodeticSystem } from "@spacexr/geodesy";
 import { describe, expect, it } from "vitest";
 import { CubeTileSurface } from "@spacexr/tiles/cube";
 import { ReferenceSurface } from "@spacexr/tiles/surface";
-import { cubeTiling, webMercatorTiling } from "@spacexr/terrain-tileset";
+import { cubeTiling } from "@spacexr/terrain-tileset";
 import { terrainBodyFrame } from "../src/terrain/gpu/body-frame";
 import { PickSurface } from "../src/terrain/gpu/pick-surface";
 import { instancedGridVertexShader } from "../src/terrain/gpu/shaders/instancedGrid.vertex";
 import { createNullScene } from "./helpers";
-const FIXTURE_SYSTEM = FixtureGeodeticSystem.WGS84;
 
 describe("GPU terrain body frame", () => {
     it("preserves camera-relative vertices for translated body and rotated tangent render frames", () => {
@@ -46,9 +44,9 @@ describe("GPU terrain body frame", () => {
         const root = new TransformNode("body", scene);
         root.position.set(1000, 2000, 3000);
         root.metadata = { bodyId: "arbitrary-body", layerId: "terrain" };
-        const pick = new PickSurface(scene, undefined, 1, 4, webMercatorTiling(FIXTURE_SYSTEM), root);
+        const pick = new PickSurface(scene, undefined, 1, 4, cubeTiling(new CubeTileSurface(ReferenceSurface.sphere(1738100))), root);
         try {
-            pick.update([{ lod: 0, x: 0, y: 0 }]);
+            pick.update([{ face: 0, lod: 0, x: 0, y: 0 }]);
             const mesh = scene.meshes[0]!;
             expect(mesh.parent).toBe(root);
             expect(mesh.metadata).toEqual(root.metadata);
