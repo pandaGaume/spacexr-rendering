@@ -243,7 +243,7 @@ export async function createMoonRuntime(scene: Scene, options: IMoonRuntimeOptio
             maxConcurrentLoads: selection.maxConcurrentLoads,
             instrumentation: { enabled: true },
             // Neighbouring tiles stay within one level across the faces of the cube, so that every edge junction connects.
-            quadtreeBalance: { topology: CUBE_TILE_TOPOLOGY, fillGaps: true },
+            quadtreeBalance: { topology: CUBE_TILE_TOPOLOGY },
             verticalScale,
             cache: { maxContentEntries: selection.contentCacheEntries, ...cache },
         });
