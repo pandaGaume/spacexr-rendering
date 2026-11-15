@@ -49,8 +49,7 @@ Add the following local dependencies alongside the generic framework dependencie
 ```json
 {
   "@spacexr/babylon-earth": "file:../spacexr-rendering/packages/babylon-earth",
-  "@spacexr/celestial-core": "file:../celestial-core",
-  "@spacexr/atmosphere": "file:../atmosphere-core"
+  "@spacexr/celestial-core": "file:../celestial-core"
 }
 ```
 

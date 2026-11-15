@@ -50,18 +50,12 @@ jobs:
         with:
           repository: pandaGaume/celestial-core
           path: celestial-core
-      - uses: actions/checkout@v7
-        with:
-          repository: pandaGaume/atmosphere-core
-          path: atmosphere-core
       - name: Build Earth dependencies
         run: |
           npm --prefix quantia ci --install-links=false
           npm --prefix quantia run build
           npm --prefix celestial-core ci --install-links=false
           npm --prefix celestial-core run build
-          npm --prefix atmosphere-core ci --install-links=false
-          npm --prefix atmosphere-core run build
       - name: Check rendering
         working-directory: spacexr-rendering
         run: |

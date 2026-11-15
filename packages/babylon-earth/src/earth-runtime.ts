@@ -26,9 +26,7 @@ import {
     type IEcefSpatialState,
     type IRuntimeAdapter,
 } from "@spacexr/3d-tiles-runtime";
-import type { IPhysicalAtmosphereConfig } from "@spacexr/atmosphere";
-import { BabylonEarthSky, type IEarthAtmosphereOptions } from "./atmosphere/babylon-sky";
-import { EARTH, EARTH_SYSTEM, earthAtmosphere, earthSunDirection } from "./earth-model";
+import { EARTH, EARTH_SYSTEM, earthSunDirection } from "./earth-model";
 import { createPolarCaps } from "./polar-caps";
 import { EarthTerrainAdapter } from "./terrain-adapter";
 
@@ -42,11 +40,6 @@ export interface IEarthRuntimeOptions {
     date?: Date;
     /** Static sea-level polar placeholders, outside Mercator coverage. Default true. */
     polarCaps?: boolean;
-    atmosphere?:
-        | false
-        | (IEarthAtmosphereOptions & {
-              physical?: Omit<IPhysicalAtmosphereConfig, "ellipsoid" | "gravity" | "planet">;
-          });
     terrain?: {
         /** Existing camera-relative GPU engine by default; mesh is also available. */
         engine?: "gpu" | "mesh";
@@ -67,12 +60,10 @@ export interface IEarthRuntime {
     readonly camera: Camera;
     readonly runtime: EarthTileRuntime;
     readonly terrain: ITerrainEngine;
-    readonly atmosphereReady: boolean;
-    /** Updates camera, tile selection and sky before the caller's scene.render(false). Never starts a render loop. */
+    /** Updates camera and tile selection before the caller's scene.render(false). Never starts a render loop. */
     update(): Promise<void>;
+    /** Moves the Sun to its direction at that date. */
     setDate(date: Date): Promise<void>;
-    setAtmosphereEnabled(enabled: boolean): void;
-    setExposure(exposure: number): void;
     /** Disposes owned resources, preserving the borrowed scene, engine and existingCamera. */
     dispose(): Promise<void>;
 }
@@ -80,8 +71,7 @@ export interface IEarthRuntime {
 export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOptions = {}): Promise<IEarthRuntime> {
     if (!scene.useRightHandedSystem) throw new Error("Earth runtime requires a right-handed ECEF scene. Use createGeospatialScene.");
     if (options.camera && options.existingCamera) throw new Error("Choose camera options or existingCamera.");
-    let date = new Date(options.date?.getTime() ?? Date.now());
-    earthSunDirection(date);
+    const date = new Date(options.date?.getTime() ?? Date.now());
     const config = options.terrain ?? {};
     const cells = config.cells ?? 32,
         minLOD = config.minLOD ?? 1,
@@ -110,20 +100,13 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
     let terrain: ITerrainEngine | undefined;
     let runtime: EarthTileRuntime | undefined;
     let driver: BabylonRuntimeDriver | undefined;
-    let sky: BabylonEarthSky | undefined;
     let sunlight: DirectionalLight | undefined;
     let ambient: HemisphericLight | undefined;
     let disposed = false;
     let updating: Promise<void> | undefined;
-    let dateRevision = 0;
-    let atmosphereEnabled = true;
-    let exposure =
-        options.atmosphere === false ? 12 : (options.atmosphere?.exposure ?? (options.atmosphere?.aerialPerspective === false ? 12 : 4));
-    const atmosphereOptions = options.atmosphere === false ? undefined : (options.atmosphere ?? {});
     const dispose = async (): Promise<void> => {
         if (disposed) return;
         disposed = true;
-        dateRevision++;
         scene.onDisposeObservable.remove(disposeObserver);
         await updating?.catch(() => undefined);
         driver?.dispose();
@@ -131,7 +114,6 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
         terrain?.dispose();
         polarCaps?.dispose();
         pages?.dispose();
-        sky?.dispose();
         sunlight?.dispose();
         ambient?.dispose();
         if (scene.activeCamera === camera) scene.activeCamera = previousCamera;
@@ -156,8 +138,6 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             ownedLabels = document.createElement("div");
             ownedLabels.hidden = true;
         }
-        if (atmosphereOptions)
-            sky = await BabylonEarthSky.create(scene, earthAtmosphere(date, atmosphereOptions.physical), atmosphereOptions);
         const direction = Vector3.FromArray(earthSunDirection(date));
         sunlight = new DirectionalLight("earth-sun", direction.negate(), scene);
         sunlight.intensity = 1.5;
@@ -182,7 +162,6 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             },
             { cells },
         );
-        if (sky && terrain instanceof GpuTerrainEngine) sky.attachTerrain(terrain.material);
 
         polarCaps = options.polarCaps === false ? undefined : createPolarCaps(scene);
         const source = createGeodesicGridSource(config.preparedHeights, {
@@ -225,9 +204,6 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             camera,
             runtime,
             terrain,
-            get atmosphereReady() {
-                return sky?.ready ?? false;
-            },
             update() {
                 if (disposed) return Promise.reject(new Error("Earth runtime is disposed."));
                 if (updating) return updating;
@@ -236,7 +212,6 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
                     await driver!.updateBeforeRender();
                     if (disposed) return;
                     terrain!.beforeRender();
-                    await sky?.update(camera!);
                 })().finally(() => {
                     updating = undefined;
                 });
@@ -244,34 +219,7 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             },
             async setDate(value) {
                 if (disposed) throw new Error("Earth runtime is disposed.");
-                const next = new Date(value.getTime());
-                const sun = earthSunDirection(next);
-                const revision = ++dateRevision;
-                const replacement = atmosphereOptions
-                    ? await BabylonEarthSky.create(scene, earthAtmosphere(next, atmosphereOptions.physical), atmosphereOptions)
-                    : undefined;
-                if (disposed || revision !== dateRevision) {
-                    replacement?.dispose();
-                    return;
-                }
-                sky?.dispose();
-                sky = replacement;
-                if (sky && terrain instanceof GpuTerrainEngine) sky.attachTerrain(terrain.material);
-                sky?.setEnabled(atmosphereEnabled);
-                sky?.setExposure(exposure);
-                date = next;
-                sunlight!.direction = Vector3.FromArray(sun).negate();
-            },
-            setAtmosphereEnabled(value) {
-                if (disposed) throw new Error("Earth runtime is disposed.");
-                atmosphereEnabled = value;
-                sky?.setEnabled(value);
-            },
-            setExposure(value) {
-                if (disposed) throw new Error("Earth runtime is disposed.");
-                if (!Number.isFinite(value) || value <= 0) throw new RangeError("Exposure must be positive.");
-                exposure = value;
-                sky?.setExposure(value);
+                sunlight!.direction = Vector3.FromArray(earthSunDirection(new Date(value.getTime()))).negate();
             },
             dispose,
         };

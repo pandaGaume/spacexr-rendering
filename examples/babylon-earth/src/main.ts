@@ -29,11 +29,10 @@ function report(error: unknown): void {
     console.error(error);
 }
 
-export type EarthDemoView = "orbit" | "atmosphere";
+export type EarthDemoView = "orbit";
 
-async function run(initialView: EarthDemoView): Promise<void> {
-    const query = new URLSearchParams(location.search),
-        withAtmosphere = query.get("atmosphere") !== "0";
+async function run(_initialView: EarthDemoView): Promise<void> {
+    const query = new URLSearchParams(location.search);
     const canvas = element<HTMLCanvasElement>("earth");
     const dpr = Number(query.get("dpr") ?? 1);
     if (!Number.isFinite(dpr) || dpr < 0.5 || dpr > 2) throw new RangeError("dpr must be between 0.5 and 2.");
@@ -46,10 +45,7 @@ async function run(initialView: EarthDemoView): Promise<void> {
     let earth: IEarthRuntime | undefined;
     let decoder: WorkerDemDecoder | undefined;
     try {
-        const inside =
-            query.get("view") === "terrain" ||
-            query.get("view") === "atmosphere" ||
-            (initialView === "atmosphere" && query.get("view") !== "orbit");
+        const inside = query.get("view") === "terrain";
         const demEnabled = query.get("dem") !== "0";
         if (demEnabled)
             decoder = new WorkerDemDecoder(
@@ -94,10 +90,9 @@ async function run(initialView: EarthDemoView): Promise<void> {
         if (!Number.isFinite(initialHour) || initialHour < 0 || initialHour > 24)
             throw new RangeError("hour must be between 0 and 24 UTC.");
         const initialDate = new Date(Date.UTC(2026, 5, 21) + initialHour * 3600000);
-        document.querySelector("h1")!.textContent = inside ? "Dans l’atmosphère" : "Terre depuis l’orbite";
+        document.querySelector("h1")!.textContent = inside ? "Relief de la Terre" : "Terre depuis l’orbite";
         earth = await createEarthRuntime(scene, {
             date: initialDate,
-            atmosphere: withAtmosphere ? { aerialPerspective: query.get("aerial") !== "0" } : false,
             camera: {
                 target: terrainView
                     ? {
@@ -150,18 +145,6 @@ async function run(initialView: EarthDemoView): Promise<void> {
             }
             view(45.8326, 6.8652, 4808, 35000, (80 * Math.PI) / 180);
         };
-        const atmosphere = element<HTMLInputElement>("atmosphere");
-        atmosphere.checked = withAtmosphere;
-        atmosphere.disabled = !withAtmosphere;
-        const showAtmosphereState = () => {
-            element<HTMLOutputElement>("atmosphere-state").value = atmosphere.checked ? "ON" : "OFF";
-        };
-        showAtmosphereState();
-        atmosphere.onchange = () => {
-            runtime.setAtmosphereEnabled(atmosphere.checked);
-            showAtmosphereState();
-        };
-        element<HTMLInputElement>("exposure").oninput = (event) => runtime.setExposure(Number((event.target as HTMLInputElement).value));
         const hour = element<HTMLInputElement>("hour");
         const dateAt = (hours: number) => new Date(Date.UTC(2026, 5, 21) + hours * 3600000);
         const showTime = (date: Date) => {
@@ -261,14 +244,7 @@ async function run(initialView: EarthDemoView): Promise<void> {
                     element<HTMLElement>("stats").textContent =
                         `${renderer} | SSE ${sse} px | ${resources.presented} tuiles implicites | ${Math.round(engine.getFps())} FPS`;
                     if (!errors.length)
-                        status.textContent =
-                            withAtmosphere && atmosphere.checked
-                                ? runtime.atmosphereReady
-                                    ? pending > 0
-                                        ? `Chargement du relief : ${pending} tâches restantes`
-                                        : "Terre et atmosphère spectrale actives"
-                                    : "Construction progressive du ciel..."
-                                : "Terre active, atmosphère désactivée";
+                        status.textContent = pending > 0 ? `Chargement du relief : ${pending} tâches restantes` : "Terre active";
                 }
             } catch (error) {
                 report(error);

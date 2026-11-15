@@ -5,8 +5,6 @@ export default defineConfig({
         preserveSymlinks: true,
         dedupe: ["@babylonjs/core", "@spacexr/geodesy"],
         alias: {
-            "@spacexr/atmosphere/webgpu": fileURLToPath(new URL("../../../atmosphere-core/webgpu/index.ts", import.meta.url)),
-            "@spacexr/atmosphere": fileURLToPath(new URL("../../../atmosphere-core/src/index.ts", import.meta.url)),
             "@spacexr/babylon-earth": fileURLToPath(new URL("../../packages/babylon-earth/src/index.ts", import.meta.url)),
             "@spacexr/3d-tiles-babylon": fileURLToPath(new URL("../../packages/core/src/index.ts", import.meta.url)),
         },
@@ -29,7 +27,6 @@ export default defineConfig({
             "@spacexr/babylon-earth",
             "@spacexr/3d-tiles-babylon",
             "@spacexr/3d-tiles-runtime",
-            "@spacexr/atmosphere",
             "@spacexr/celestial-core",
         ],
     },
@@ -40,7 +37,6 @@ export default defineConfig({
             input: {
                 index: fileURLToPath(new URL("index.html", import.meta.url)),
                 orbital: fileURLToPath(new URL("orbital.html", import.meta.url)),
-                atmosphere: fileURLToPath(new URL("atmosphere.html", import.meta.url)),
             },
         },
     },

@@ -38,7 +38,7 @@ The generic libraries require explicit physical and geodetic inputs. Provider pr
 
 ## Optional Earth runtime and two examples
 
-`@spacexr/babylon-earth` composes Celestial, the existing TileRuntime and the public spectral AtmosphereSky backend. Its Babylon atmosphere bridge remains internal. Run `npm run example:earth` to start the sample on port 5189 and automatically open both `/orbital.html?view=horizon&sse=20` and `/atmosphere.html?hour=10&sse=20`. Browser checks are attached to this workspace through `npm run test:earth:motion`, `test:earth:views`, `test:earth:gpu`, `test:earth:visual` and `test:earth:native`. See [the sample](examples/babylon-earth/README.md) and [the reusable library](packages/babylon-earth/README.md). Atmospheric rendering requires WebGPU; explicit WebGL terrain-only mode remains available. The framework scripts now also install/build Quantia, Celestial and Atmosphere dependencies.
+`@spacexr/babylon-earth` composes Celestial and the existing TileRuntime, with the Sun as a directional light; there is no atmosphere for now. Run `npm run example:earth` to start the sample on port 5189 and open `/orbital.html?view=horizon&sse=20` and `/orbital.html?view=terrain&hour=10&sse=20`. See [the sample](examples/babylon-earth/README.md) and [the reusable library](packages/babylon-earth/README.md). The framework scripts also install and build the Quantia and Celestial dependencies.
 
 ## Draped vectors
 

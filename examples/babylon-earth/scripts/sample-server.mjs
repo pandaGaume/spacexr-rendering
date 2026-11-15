@@ -3,11 +3,9 @@ import { fileURLToPath } from "node:url";
 
 export const sampleRoot = fileURLToPath(new URL("../", import.meta.url));
 export const renderingRoot = fileURLToPath(new URL("../../../", import.meta.url));
-export const atmosphereRoot = fileURLToPath(new URL("../../../../atmosphere-core/", import.meta.url));
 export const sampleUrl = "http://127.0.0.1:5189";
 
 export async function ensureSampleServer() {
-    await import("../../../packages/babylon-earth/scripts/build-shader.mjs");
     let response;
     try {
         response = await fetch(`${sampleUrl}/src/main.ts`, { signal: AbortSignal.timeout(2000) });
@@ -47,5 +45,4 @@ export async function ensureSampleServer() {
 
 function printSources() {
     console.log(`Babylon Earth sources: ${sampleRoot}`);
-    console.log(`Atmosphere sources: ${atmosphereRoot}`);
 }

@@ -10,7 +10,6 @@ const repositories = [
     "../../terrain-core/",
     "../../quantia/",
     "../../celestial-core/",
-    "../../atmosphere-core/",
     "../",
 ];
 for (const relative of repositories) {
@@ -19,11 +18,7 @@ for (const relative of repositories) {
         throw new Error(`Missing sibling repository: ${cwd}`);
     const command =
         action === "check" &&
-        [
-            "../../quantia/",
-            "../../celestial-core/",
-            "../../atmosphere-core/",
-        ].includes(relative)
+        ["../../quantia/", "../../celestial-core/"].includes(relative)
             ? "build"
             : action;
     const args =

@@ -26,7 +26,7 @@ process.once("SIGTERM", () => {
 });
 try {
     await openPage(`${server.baseUrl}/orbital.html?view=horizon&sse=20`);
-    await openPage(`${server.baseUrl}/atmosphere.html?hour=10&sse=20`);
+    await openPage(`${server.baseUrl}/orbital.html?view=terrain&hour=10&sse=20`);
 } catch (error) {
     await close();
     throw error;

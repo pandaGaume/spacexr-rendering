@@ -12,8 +12,8 @@ The application supplies a `GeodeticSystem`, surface/tiling and source metrics. 
 
 ## Babylon Earth library
 
-`packages/babylon-earth` now implements `@spacexr/babylon-earth` as an optional composition. It combines Celestial ellipsoid/gravity and Sun direction, the existing implicit terrain adapter, one existing TileRuntime instance, camera and lighting, and the public spectral AtmosphereSky WebGPU backend. The atmosphere bridge stays internal for this first delivery. Generic packages do not acquire body-specific dependencies.
+`packages/babylon-earth` now implements `@spacexr/babylon-earth` as an optional composition. It combines Celestial ellipsoid/gravity and Sun direction, the existing implicit terrain adapter, one existing TileRuntime instance, camera and lighting. The atmosphere was removed on 2026-11-15 and will be reintroduced later. Generic packages do not acquire body-specific dependencies.
 
-The host supplies its Babylon scene and engine and retains the render loop. The facade provides update, date/exposure/visibility and asynchronous disposal. Imagery residency follows terrain readiness and presentation, without another selector. Mercator remains the terrain projection; static polar placeholders close its uncovered poles without cube APIs.
+The host supplies its Babylon scene and engine and retains the render loop. The facade provides update, date and asynchronous disposal. Imagery residency follows terrain readiness and presentation, without another selector. Mercator remains the terrain projection; static polar placeholders close its uncovered poles without cube APIs.
 
-Two distinct samples demonstrate orbital and inside-atmosphere use. Sky/limb are implemented; atmospheric aerial perspective and automatic device-loss recovery remain later work. See [the library](../packages/babylon-earth/README.md) and [the samples](../examples/babylon-earth/README.md) for the exact current contract.
+The sample demonstrates orbital and terrain views. Automatic device-loss recovery remains later work. See [the library](../packages/babylon-earth/README.md) and [the samples](../examples/babylon-earth/README.md) for the exact current contract.

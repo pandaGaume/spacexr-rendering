@@ -9,6 +9,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 ### Removed
 
 - The ocean of `@spacexr/babylon-earth`: the `ocean` option of `createEarthRuntime`, `IEarthOceanOptions`, its engine and shader, and the `@spacexr/ocean` dependency, which is not published. The experiment is kept apart, out of `main`.
+- The atmosphere of `@spacexr/babylon-earth`, to be reintroduced later: the `atmosphere` option of `createEarthRuntime`, `atmosphereReady`, `setAtmosphereEnabled`, `setExposure`, `IEarthAtmosphereOptions`, the sky, aerial perspective and native surface bridge, the Earth ozone layer and its notices, the shader script, and the `@spacexr/atmosphere` dependency. The Sun still lights the terrain, and `setDate` moves it. The Earth example loses its atmosphere page, controls and browser qualification scripts; the CI no longer builds atmosphere-core.
 
 ### Changed
 
