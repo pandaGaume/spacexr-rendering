@@ -5,59 +5,42 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+# A new push to a branch stops the run of the commit it replaces.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
+  # Packages: build, format, lint, types and tests of every workspace, examples included, without their bundles.
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           path: spacexr-rendering
-      - uses: actions/checkout@v7
-        with:
-          repository: pandaGaume/spacexr-tiling
-          path: spacexr-tiling
-      - uses: actions/checkout@v7
-        with:
-          repository: pandaGaume/3d-tiles-core
-          path: 3d-tiles-core
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22.x
-      - name: Build spacexr-tiling
-        working-directory: spacexr-tiling
-        run: |
-          npm ci
-          npm run build
-      - name: Build core
-        working-directory: 3d-tiles-core/node
-        run: |
-          npm ci
-          npm run build --workspace @spacexr/3d-tiles-core --workspace @spacexr/3d-tiles-runtime
-      - uses: actions/checkout@v7
-        with:
-          repository: pandaGaume/terrain-core
-          path: terrain-core
-      - name: Build terrain
-        working-directory: terrain-core
-        run: |
-          npm ci
-          npm run build
-      - uses: actions/checkout@v7
-        with:
-          repository: pandaGaume/quantia
-          path: quantia
-      - uses: actions/checkout@v7
-        with:
-          repository: pandaGaume/celestial-core
-          path: celestial-core
-      - name: Build Earth dependencies
-        run: |
-          npm --prefix quantia ci --install-links=false
-          npm --prefix quantia run build
-          npm --prefix celestial-core ci --install-links=false
-          npm --prefix celestial-core run build
+      - uses: ./spacexr-rendering/.github/actions/framework
       - name: Check rendering
         working-directory: spacexr-rendering
+        run: npm run check
+  # The production bundle of each example, one example per runner, beside the check.
+  examples:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - babylon-earth
+          - babylon-google-3d-tiles
+          - babylon-implicit-grid-mapzen
+          - babylon-mars
+          - babylon-moon
+          - babylon-vector-terrain
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: spacexr-rendering
+      - uses: ./spacexr-rendering/.github/actions/framework
+      - name: Build ${{ matrix.example }}
+        working-directory: spacexr-rendering
         run: |
-          npm ci
-          npm run check
+          npm run build
+          npm run build --workspace examples/${{ matrix.example }}

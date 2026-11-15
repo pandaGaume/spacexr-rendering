@@ -1,0 +1,66 @@
+name: SpaceXR framework
+description: Checks out and builds the sibling repositories the rendering links to, beside the rendering checkout.
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+      with:
+        repository: pandaGaume/spacexr-tiling
+        path: spacexr-tiling
+    - uses: actions/checkout@v7
+      with:
+        repository: pandaGaume/3d-tiles-core
+        path: 3d-tiles-core
+    - uses: actions/checkout@v7
+      with:
+        repository: pandaGaume/terrain-core
+        path: terrain-core
+    - uses: actions/checkout@v7
+      with:
+        repository: pandaGaume/quantia
+        path: quantia
+    - uses: actions/checkout@v7
+      with:
+        repository: pandaGaume/celestial-core
+        path: celestial-core
+    # Downloads are cached across runs, keyed on every lockfile: npm ci then installs from the cache.
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 22.x
+        cache: npm
+        cache-dependency-path: |
+          spacexr-rendering/package-lock.json
+          spacexr-tiling/package-lock.json
+          3d-tiles-core/node/package-lock.json
+          terrain-core/package-lock.json
+          quantia/package-lock.json
+          celestial-core/package-lock.json
+    - name: Build spacexr-tiling
+      shell: bash
+      working-directory: spacexr-tiling
+      run: |
+        npm ci --prefer-offline --no-audit --no-fund
+        npm run build
+    - name: Build core
+      shell: bash
+      working-directory: 3d-tiles-core/node
+      run: |
+        npm ci --prefer-offline --no-audit --no-fund
+        npm run build --workspace @spacexr/3d-tiles-core --workspace @spacexr/3d-tiles-runtime
+    - name: Build terrain
+      shell: bash
+      working-directory: terrain-core
+      run: |
+        npm ci --prefer-offline --no-audit --no-fund
+        npm run build
+    - name: Build Earth dependencies
+      shell: bash
+      run: |
+        npm --prefix quantia ci --install-links=false --prefer-offline --no-audit --no-fund
+        npm --prefix quantia run build
+        npm --prefix celestial-core ci --install-links=false --prefer-offline --no-audit --no-fund
+        npm --prefix celestial-core run build
+    - name: Install rendering
+      shell: bash
+      working-directory: spacexr-rendering
+      run: npm ci --prefer-offline --no-audit --no-fund

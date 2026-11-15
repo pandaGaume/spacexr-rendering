@@ -24,7 +24,8 @@
     "scripts": {
         "shaders": "npm run shaders --workspace @spacexr/3d-tiles-babylon",
         "shaders:watch": "npm run shaders:watch --workspace @spacexr/3d-tiles-babylon",
-        "build": "npm run build --workspaces --if-present",
+        "build": "npm run build --workspace=packages --if-present",
+        "build:examples": "npm run build --workspace=examples --if-present",
         "clean": "npm run clean --workspaces --if-present",
         "typecheck": "npm run typecheck --workspaces --if-present",
         "test": "npm run test --workspaces --if-present",

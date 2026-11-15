@@ -20,7 +20,7 @@ npm run framework:verify
 npm run example:implicit-grid
 ```
 
-`npm run framework:check` runs the existing formatting, lint, type checks, tests and builds in dependency order, including both reference examples. Google content still requires its existing demonstration credentials.
+`npm run framework:check` runs the formatting, lint, type checks, tests and package builds of each repository in dependency order. In this repository, `npm run check` builds the packages, then formats, lints, type checks and tests every workspace, examples included; `npm run build:examples` builds the production bundles of the examples, which the CI builds beside the check, one example per runner. Google content still requires its existing demonstration credentials.
 
 Open [SpaceXR-Framework.code-workspace](SpaceXR-Framework.code-workspace) for library work, or [SpaceXR-Applications.code-workspace](SpaceXR-Applications.code-workspace) to include the reference demonstrations. Task folder names are stable and paths are relative.
 
