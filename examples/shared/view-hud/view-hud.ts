@@ -19,7 +19,7 @@ export class ViewHud {
     private readonly barLabel: HTMLElement;
     private readonly needle: HTMLElement;
     private readonly fields: Record<
-        "heading" | "pitch" | "altitude" | "height" | "position",
+        "heading" | "pitch" | "altitude" | "height" | "ground" | "position",
         HTMLElement
     >;
     private readonly shown = new Map<HTMLElement, string>();
@@ -52,6 +52,10 @@ export class ViewHud {
                 "Ref",
                 "Height of the camera over the reference surface of the body",
             ),
+            ground: field(
+                "Gnd",
+                "Height of the terrain below the camera over the reference surface of the body",
+            ),
             heading: field("Hdg", "Heading of the view, clockwise from north"),
             pitch: field("Pitch", "Angle of the view over the horizon"),
             position: field("Pos", "Latitude and east longitude of the camera"),
@@ -83,6 +87,13 @@ export class ViewHud {
             view.altitude === undefined ? "n/a" : formatLength(view.altitude),
         );
         this.show(this.fields.height, formatLength(view.height));
+        // The terrain below the camera: its height over the reference, known with the altitude over it.
+        this.show(
+            this.fields.ground,
+            view.altitude === undefined
+                ? "n/a"
+                : formatLength(view.height - view.altitude),
+        );
         this.show(
             this.fields.heading,
             view.heading === undefined

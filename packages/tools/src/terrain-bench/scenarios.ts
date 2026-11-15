@@ -57,13 +57,13 @@ export const BENCH_VIEWS: readonly IBenchView[] = [
  * Every view on every engine.
  *
  * @param base - Address of the example.
- * @param dataset - Address of a tile service for the cube; without it, the synthetic Moon.
+ * @param dataset - Folder of a Moon revision of a tile service, for the cube paths; without it, they are left out.
  * @param grid - Cells per side of the grids on the cube; without it, those of the example.
  */
 export function benchScenarios(base: string, dataset?: string, grid?: number, moonBase = "http://localhost:5176"): IBenchScenario[] {
     const root = base.replace(/\/+$/, "");
     const moon = moonBase.replace(/\/+$/, "");
-    return BENCH_VIEWS.flatMap((view) =>
+    return BENCH_VIEWS.filter((view) => view.projection === "mercator" || dataset !== undefined).flatMap((view) =>
         // The cube runs in the Moon example, on the GPU engine alone; Web Mercator in the implicit grid example, on both.
         (view.projection === "cube" ? (["gpu"] as const) : BENCH_ENGINES).map((engine) => ({
             ...view,

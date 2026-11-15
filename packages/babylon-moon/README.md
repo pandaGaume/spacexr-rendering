@@ -2,7 +2,7 @@
 
 Moon composition for an existing Babylon scene, on the cube index of the SpaceXR tilings, poles included. One terrain `TileRuntime` selects the six faces of the cube, balanced across their edges; a second one selects the imagery pages when the body has imagery. The GPU terrain engine draws radial heights, in GLSL on WebGL and in WGSL on WebGPU. A camera orbits across the poles, and a directional Sun with a dim sky light lights the relief.
 
-The body is an input: its reference surface, its DEM and its imagery. `loadMoonBody(service, decoder)` reads them from a tile service that publishes `elevation.json` and, optionally, `imagery.json` in the `spacexr-cube-equiangular/1` scheme; any reference surface is accepted, a triaxial one included. A caller can also build an `IMoonBody` from its own DEM pyramid, as the example does for its synthetic Moon. The package holds no body constant.
+The body is an input: its reference surface, its DEM and its imagery. `loadMoonBody(service, decoder)` reads them from a tile service that publishes `elevation.json` and, optionally, `imagery.json` in the `spacexr-cube-equiangular/1` scheme; any reference surface is accepted, a triaxial one included. A caller can also build an `IMoonBody` from its own DEM pyramid. The package holds no body constant.
 
 ```ts
 import { createGeospatialRendererEngine, createGeospatialScene } from "@spacexr/3d-tiles-babylon";

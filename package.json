@@ -14,6 +14,7 @@
         "packages/tools",
         "packages/babylon-earth",
         "packages/babylon-moon",
+        "packages/babylon-mars",
         "packages/babylon-gltf-ext",
         "examples/*"
     ],
@@ -46,6 +47,7 @@
         "example:earth:preview": "npm run preview --workspace @spacexr/example-babylon-earth",
         "example:earth:orbit": "npm run dev --workspace @spacexr/example-babylon-earth -- --open /orbital.html",
         "example:moon": "npm run dev --workspace @spacexr/example-babylon-moon",
+        "example:mars": "npm run dev --workspace @spacexr/example-babylon-mars",
         "example:vectors": "npm run dev --workspace @spacexr/example-babylon-vector-terrain",
         "example:vectors:preview": "npm run preview --workspace @spacexr/example-babylon-vector-terrain"
     },
