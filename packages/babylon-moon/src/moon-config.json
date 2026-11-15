@@ -1,0 +1,9 @@
+{
+    "camera": {
+        "radiusMin": 10,
+        "altitudeMin": 1.5
+    },
+    "selection": {
+        "workingSetFactor": 3
+    }
+}

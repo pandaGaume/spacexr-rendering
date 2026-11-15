@@ -60,18 +60,19 @@ export const BENCH_VIEWS: readonly IBenchView[] = [
  * @param dataset - Address of a tile service for the cube; without it, the synthetic Moon.
  * @param grid - Cells per side of the grids on the cube; without it, those of the example.
  */
-export function benchScenarios(base: string, dataset?: string, grid?: number): IBenchScenario[] {
+export function benchScenarios(base: string, dataset?: string, grid?: number, moonBase = "http://localhost:5176"): IBenchScenario[] {
     const root = base.replace(/\/+$/, "");
+    const moon = moonBase.replace(/\/+$/, "");
     return BENCH_VIEWS.flatMap((view) =>
-        BENCH_ENGINES.map((engine) => {
-            const body =
-                view.projection === "cube" ? `body=moon&${dataset ? `dataset=${dataset}&` : ""}${grid ? `grid=${grid}&` : ""}` : "";
-            return {
-                ...view,
-                engine,
-                id: `${view.name}/${engine}`,
-                url: `${root}/?${body}engine=${engine}&solid=1&imagery=none&${view.query}`,
-            };
-        }),
+        // The cube runs in the Moon example, on the GPU engine alone; Web Mercator in the implicit grid example, on both.
+        (view.projection === "cube" ? (["gpu"] as const) : BENCH_ENGINES).map((engine) => ({
+            ...view,
+            engine,
+            id: `${view.name}/${engine}`,
+            url:
+                view.projection === "cube"
+                    ? `${moon}/?${dataset ? `dataset=${dataset}&` : ""}${grid ? `grid=${grid}&` : ""}solid=1&imagery=none&${view.query}`
+                    : `${root}/?engine=${engine}&solid=1&imagery=none&${view.query}`,
+        })),
     );
 }

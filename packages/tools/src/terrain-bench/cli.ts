@@ -18,9 +18,11 @@ import { benchScenarios, type IBenchPath } from "./scenarios";
 
 const USAGE = `Usage: terrain-bench [options]
 
-Flies fixed camera paths in headless Chrome over the implicit grid example, which must be running.
+Flies fixed camera paths in headless Chrome over the implicit grid example (Web Mercator) and the Moon example
+(cube), which must be running.
 
-  --url <address>      Address of the example. Defaults to http://localhost:5174
+  --url <address>      Address of the implicit grid example. Defaults to http://localhost:5174
+  --moon-url <address> Address of the Moon example. Defaults to http://localhost:5176
   --dataset <address>  Tile service for the cube. Defaults to the synthetic Moon
   --browser <path>     Chrome or Chromium. Defaults to the usual locations
   --only <pattern>     Scenarios whose id matches this regular expression
@@ -53,9 +55,12 @@ async function main(): Promise<void> {
     const query = option("query");
     const shots = option("shots");
     const maxRequests = Number(option("max-requests") ?? 5000);
-    const scenarios = benchScenarios(option("url") ?? "http://localhost:5174", option("dataset"), grid ? Number(grid) : undefined).filter(
-        (scenario) => !only || new RegExp(only).test(scenario.id),
-    );
+    const scenarios = benchScenarios(
+        option("url") ?? "http://localhost:5174",
+        option("dataset"),
+        grid ? Number(grid) : undefined,
+        option("moon-url") ?? "http://localhost:5176",
+    ).filter((scenario) => !only || new RegExp(only).test(scenario.id));
     const label = option("label") ?? execSync("git rev-parse --short HEAD").toString().trim();
     const profile = mkdtempSync(join(tmpdir(), "terrain-bench-"));
     const { devtools, stop } = await startBrowser(findBrowser(option("browser")), 9400 + Math.floor(Math.random() * 400), profile);

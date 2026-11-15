@@ -32,20 +32,9 @@
         "contentCacheEntries": 512,
         "maxDrapeDepth": 4
     },
-    "objects": {
-        "screenSpaceError": 8
-    },
-    "orbitalCamera": {
-        "radiusMin": 10,
-        "altitudeMin": 1.5
-    },
     "mercator": {
         "minLOD": 3,
         "maxLOD": 18
-    },
-    "cube": {
-        "workingSetFactor": 3,
-        "syntheticDemMaxLOD": 10
     },
     "mesh": {
         "junctionBudgetMilliseconds": 4

@@ -61,23 +61,13 @@ const CRATERS = createCraters();
  * sides of every tile edge and cube face edge: a crack or a shifted edge in the terrain is a bug of the tiling.
  */
 export function syntheticMoonHeight(direction: Readonly<ICartesian3>): number {
-    let height =
-        600 *
-        Math.sin(5 * direction.x + 1) *
-        Math.sin(5 * direction.y + 2) *
-        Math.sin(5 * direction.z + 3);
+    let height = 600 * Math.sin(5 * direction.x + 1) * Math.sin(5 * direction.y + 2) * Math.sin(5 * direction.z + 3);
     for (const { center, radius, depth } of CRATERS) {
-        const cosine =
-            center.x * direction.x +
-            center.y * direction.y +
-            center.z * direction.z;
+        const cosine = center.x * direction.x + center.y * direction.y + center.z * direction.z;
         if (cosine < Math.cos(radius * 1.4)) continue;
         const distance = Math.acos(Math.min(1, cosine)) / radius;
         // A bowl with a raised rim that fades outside.
-        height +=
-            distance < 1
-                ? depth * (distance * distance - 1) + 0.12 * depth
-                : 0.12 * depth * (1 - (distance - 1) / 0.4);
+        height += distance < 1 ? depth * (distance * distance - 1) + 0.12 * depth : 0.12 * depth * (1 - (distance - 1) / 0.4);
     }
     return height;
 }
@@ -86,21 +76,13 @@ export function syntheticMoonHeight(direction: Readonly<ICartesian3>): number {
  * Elevation tile of the synthetic Moon, as a tile service would serve it: `(tileSize + 1)^2` radial heights in point
  * registration, which hold their shared edges.
  */
-export function syntheticMoonTile(
-    address: ITileAddress,
-    tileSize = 256,
-): IHeightGrid {
+export function syntheticMoonTile(address: ITileAddress, tileSize = 256): IHeightGrid {
     const side = tileSize + 1;
     const data = new Float32Array(side * side);
     const direction = { x: 0, y: 0, z: 0 };
     for (let row = 0; row < side; row++) {
         for (let column = 0; column < side; column++) {
-            cubeTileDirection(
-                address,
-                column / tileSize,
-                row / tileSize,
-                direction,
-            );
+            cubeTileDirection(address, column / tileSize, row / tileSize, direction);
             data[row * side + column] = syntheticMoonHeight(direction);
         }
     }
@@ -113,9 +95,7 @@ let queue: Promise<unknown> = Promise.resolve();
  * Loads tiles of the synthetic Moon one at a time, each in its own task: a tile takes about 60 ms on the main thread, and
  * a real tile service costs none of it.
  */
-export function loadSyntheticMoonTile(
-    address: ITileAddress,
-): Promise<IHeightGrid> {
+export function loadSyntheticMoonTile(address: ITileAddress): Promise<IHeightGrid> {
     const tile = queue.then(
         () =>
             new Promise<IHeightGrid>((resolve) => {
