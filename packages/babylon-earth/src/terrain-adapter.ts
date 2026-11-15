@@ -1,5 +1,6 @@
 import type { ITerrainEngine } from "@spacexr/3d-tiles-babylon";
-import { metadataTileAddress, type BabylonRasterPages, type IBabylonRasterPage } from "@spacexr/3d-tiles-babylon";
+import type { BabylonRasterPages, IBabylonRasterPage } from "@spacexr/3d-tiles-babylon";
+import { metadataTileAddress } from "@spacexr/terrain-tileset";
 import type {
     IEcefSpatialState,
     ITileActivationContext,

@@ -71,8 +71,7 @@
         "@spacexr/3d-tiles-babylon": "0.1.0",
         "@spacexr/celestial-core": "0.1.0",
         "@spacexr/atmosphere": "0.1.0",
-        "@webgpu/types": "^0.1.74",
-        "@spacexr/ocean": "0.1.0"
+        "@webgpu/types": "^0.1.74"
     },
     "devDependencies": {
         "@babylonjs/core": "~9.33.1",

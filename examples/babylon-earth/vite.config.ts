@@ -5,7 +5,6 @@ export default defineConfig({
         preserveSymlinks: true,
         dedupe: ["@babylonjs/core", "@spacexr/geodesy"],
         alias: {
-            "@spacexr/ocean": fileURLToPath(new URL("../../../ocean-core/src/index.ts", import.meta.url)),
             "@spacexr/atmosphere/webgpu": fileURLToPath(new URL("../../../atmosphere-core/webgpu/index.ts", import.meta.url)),
             "@spacexr/atmosphere": fileURLToPath(new URL("../../../atmosphere-core/src/index.ts", import.meta.url)),
             "@spacexr/babylon-earth": fileURLToPath(new URL("../../packages/babylon-earth/src/index.ts", import.meta.url)),

@@ -11,19 +11,17 @@ import {
     GpuTerrainEngine,
     MeshTerrainEngine,
     type ITerrainEngine,
-    createGeodesicGridSource,
     createGeospatialCamera,
-    webMercatorTiling,
     type IBabylonRasterPagesOptions,
     type IGeospatialCameraOptions,
     type IGridElevationOptions,
-    type IPreparedHeights,
 } from "@spacexr/3d-tiles-babylon";
+import { createGeodesicGridSource, webMercatorTiling, type IPreparedHeights } from "@spacexr/terrain-tileset";
+import { WebMercatorTileMetrics } from "@spacexr/tiles";
 import {
     DenseImplicitSubtreeLoader,
     EcefSpatialMetric,
     TileRuntime,
-    WebMercatorTileMetrics,
     type IEcefCameraFrame,
     type IEcefSpatialState,
     type IRuntimeAdapter,
@@ -34,12 +32,8 @@ import { EARTH, EARTH_SYSTEM, earthAtmosphere, earthSunDirection } from "./earth
 import { createPolarCaps } from "./polar-caps";
 import { EarthTerrainAdapter } from "./terrain-adapter";
 
-import {OceanTerrainEngine,type IEarthOceanOptions} from "./ocean/ocean-engine";
-
 export type EarthTileRuntime = TileRuntime<IEcefCameraFrame, IEcefSpatialState, unknown, never>;
 export interface IEarthRuntimeOptions {
-    /** Optional opaque ocean. Requires the explicit P0 reference and prepared linear mask. */
-    ocean?: IEarthOceanOptions;
     camera?: Omit<IGeospatialCameraOptions, "geodeticSystem">;
     /** Borrow an existing ECEF camera instead of creating one. */
     existingCamera?: Camera;
@@ -74,7 +68,6 @@ export interface IEarthRuntime {
     readonly runtime: EarthTileRuntime;
     readonly terrain: ITerrainEngine;
     readonly atmosphereReady: boolean;
-    readonly ocean?: ITerrainEngine;
     /** Updates camera, tile selection and sky before the caller's scene.render(false). Never starts a render loop. */
     update(): Promise<void>;
     setDate(date: Date): Promise<void>;
@@ -115,7 +108,6 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
     let pages: BabylonRasterPages | undefined;
     let polarCaps: ReturnType<typeof createPolarCaps> | undefined;
     let terrain: ITerrainEngine | undefined;
-    let ocean: OceanTerrainEngine | undefined;
     let runtime: EarthTileRuntime | undefined;
     let driver: BabylonRuntimeDriver | undefined;
     let sky: BabylonEarthSky | undefined;
@@ -136,7 +128,7 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
         await updating?.catch(() => undefined);
         driver?.dispose();
         await runtime?.dispose();
-        if (ocean) ocean.dispose(); else terrain?.dispose();
+        terrain?.dispose();
         polarCaps?.dispose();
         pages?.dispose();
         sky?.dispose();
@@ -191,18 +183,13 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             { cells },
         );
         if (sky && terrain instanceof GpuTerrainEngine) sky.attachTerrain(terrain.material);
-        if(options.ocean){
-            if(config.engine==="mesh")throw new Error("P1 ocean currently requires the existing GPU terrain path.");
-            ocean=new OceanTerrainEngine(terrain,scene,{scene,labelLayer:options.labelLayer??ownedLabels!,wireframe:false,geometrySelection:"runtime",lighting:"terrain",junctions:"fine",edgeHeights:"coarsest",tiling:webMercatorTiling(EARTH_SYSTEM)},cells,options.ocean,()=>runtime!.metadataStore);
-            sky?.attachTerrain(ocean.water.material,1);
-        }
 
         polarCaps = options.polarCaps === false ? undefined : createPolarCaps(scene);
         const source = createGeodesicGridSource(config.preparedHeights, {
             id: "earth-terrain",
             metrics: new WebMercatorTileMetrics({ minLOD, maxLOD, tileSize: cells }, EARTH_SYSTEM),
         });
-        const adapter = new EarthTerrainAdapter(ocean ?? terrain, pages);
+        const adapter = new EarthTerrainAdapter(terrain, pages);
         const ports: IRuntimeAdapter<IEcefCameraFrame, IEcefSpatialState, unknown, never> = {
             tilesets: { load: async () => ({ tileset: source.tileset }) },
             subtrees: new DenseImplicitSubtreeLoader(),
@@ -238,7 +225,6 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             camera,
             runtime,
             terrain,
-            ...(ocean ? {ocean: ocean.water} : {}),
             get atmosphereReady() {
                 return sky?.ready ?? false;
             },
@@ -249,7 +235,7 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
                     camera!.update();
                     await driver!.updateBeforeRender();
                     if (disposed) return;
-                    (ocean ?? terrain)!.beforeRender();
+                    terrain!.beforeRender();
                     await sky?.update(camera!);
                 })().finally(() => {
                     updating = undefined;
@@ -271,7 +257,6 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
                 sky?.dispose();
                 sky = replacement;
                 if (sky && terrain instanceof GpuTerrainEngine) sky.attachTerrain(terrain.material);
-                if (ocean) sky?.attachTerrain(ocean.water.material,1);
                 sky?.setEnabled(atmosphereEnabled);
                 sky?.setExposure(exposure);
                 date = next;

@@ -63,7 +63,6 @@
         "@spacexr/tiles": "file:../spacexr-tiling/packages/tiles",
         "@spacexr/celestial-core": "file:../celestial-core",
         "@spacexr/atmosphere": "file:../atmosphere-core",
-        "@spacexr/vector": "file:../terrain-core/packages/vector",
-        "@spacexr/ocean": "file:../ocean-core"
+        "@spacexr/vector": "file:../terrain-core/packages/vector"
     }
 }
