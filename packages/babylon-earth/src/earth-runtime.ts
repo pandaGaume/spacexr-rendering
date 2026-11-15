@@ -10,6 +10,7 @@ import {
     BabylonRuntimeDriver,
     GpuTerrainEngine,
     MeshTerrainEngine,
+    TERRAIN_CONFIG,
     type ITerrainEngine,
     createGeospatialCamera,
     type IBabylonRasterPagesOptions,
@@ -204,8 +205,10 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             maxScreenSpaceError: sse,
             quadtreeBalance: { wrapX: true },
             verticalScale,
-            maxConcurrentLoads: 8,
-            cache: { maxContentEntries: 256 },
+            refinementHysteresisRatio: TERRAIN_CONFIG.selection.hysteresis,
+            coarseningDelayMilliseconds: TERRAIN_CONFIG.selection.coarseningDelayMilliseconds,
+            maxConcurrentLoads: TERRAIN_CONFIG.selection.maxConcurrentLoads,
+            cache: { maxContentEntries: TERRAIN_CONFIG.selection.contentCacheEntries },
             instrumentation: { enabled: true },
         });
         if (options.onError)
@@ -215,6 +218,8 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
         driver = new BabylonRuntimeDriver(runtime, scene, {
             camera,
             manual: true,
+            // The periphery of the view loads ahead of the camera, at every depth.
+            frustumMargin: TERRAIN_CONFIG.selection.frustumMargin,
             ...(options.onError ? { onError: options.onError } : {}),
         });
         await driver.start();
