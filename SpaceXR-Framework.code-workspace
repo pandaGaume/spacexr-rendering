@@ -19,10 +19,6 @@
         {
             "name": "Celestial",
             "path": "../celestial-core"
-        },
-        {
-            "name": "Atmosphere",
-            "path": "../atmosphere-core"
         }
     ],
     "settings": {
@@ -305,16 +301,6 @@
                 "label": "Earth: orbital",
                 "type": "shell",
                 "command": "npm run example:earth:orbit",
-                "options": {
-                    "cwd": "${workspaceFolder:Rendering}"
-                },
-                "problemMatcher": [],
-                "isBackground": true
-            },
-            {
-                "label": "Earth: atmosphere",
-                "type": "shell",
-                "command": "npm run example:earth:atmosphere",
                 "options": {
                     "cwd": "${workspaceFolder:Rendering}"
                 },

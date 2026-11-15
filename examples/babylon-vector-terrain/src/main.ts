@@ -66,7 +66,6 @@ async function start(): Promise<void> {
         });
         earth = await createEarthRuntime(scene, {
             date: new Date("2026-06-21T12:00:00Z"),
-            atmosphere: false,
             polarCaps: false,
             camera: {
                 target: { latitudeDegrees: 45.8326, longitudeDegrees: 6.8652, heightMeters: 3000 },

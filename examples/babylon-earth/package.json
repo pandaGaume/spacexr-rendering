@@ -2,7 +2,7 @@
     "name": "@spacexr/example-babylon-earth",
     "version": "0.1.0",
     "private": true,
-    "description": "Standalone Earth, implicit terrain and spectral atmosphere example.",
+    "description": "Standalone Earth and implicit terrain example.",
     "type": "module",
     "license": "Apache-2.0",
     "engines": {
@@ -18,12 +18,7 @@
         "format": "prettier --check \"src/**/*.{ts,css}\" \"*.{ts,json,md,html}\"",
         "format:fix": "prettier --write \"src/**/*.{ts,css}\" \"*.{ts,json,md,html}\"",
         "check": "npm run format && npm run lint && npm run typecheck && npm run build",
-        "open": "node scripts/open-samples.mjs",
-        "test:motion": "node scripts/browser/motion.cjs",
-        "test:gpu": "node scripts/browser/gpu-profile.cjs",
-        "test:visual": "node scripts/browser/visual.cjs",
-        "test:native": "node scripts/browser/native-material.cjs",
-        "test:views": "node scripts/browser/motion-views.cjs"
+        "open": "node scripts/open-samples.mjs"
     },
     "dependencies": {
         "@babylonjs/core": "^9.33.1",

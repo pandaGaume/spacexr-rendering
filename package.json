@@ -44,14 +44,8 @@
         "example:earth": "npm run open --workspace @spacexr/example-babylon-earth",
         "example:earth:preview": "npm run preview --workspace @spacexr/example-babylon-earth",
         "example:earth:orbit": "npm run dev --workspace @spacexr/example-babylon-earth -- --open /orbital.html",
-        "example:earth:atmosphere": "npm run dev --workspace @spacexr/example-babylon-earth -- --open /atmosphere.html",
         "example:vectors": "npm run dev --workspace @spacexr/example-babylon-vector-terrain",
-        "example:vectors:preview": "npm run preview --workspace @spacexr/example-babylon-vector-terrain",
-        "test:earth:motion": "npm run test:motion --workspace @spacexr/example-babylon-earth",
-        "test:earth:gpu": "npm run test:gpu --workspace @spacexr/example-babylon-earth",
-        "test:earth:visual": "npm run test:visual --workspace @spacexr/example-babylon-earth",
-        "test:earth:native": "npm run test:native --workspace @spacexr/example-babylon-earth",
-        "test:earth:views": "npm run test:views --workspace @spacexr/example-babylon-earth"
+        "example:vectors:preview": "npm run preview --workspace @spacexr/example-babylon-vector-terrain"
     },
     "dependencies": {
         "@spacexr/3d-tiles-core": "file:../3d-tiles-core/node/packages/core",
@@ -62,8 +56,6 @@
         "@spacexr/terrain-tileset": "file:../terrain-core/packages/terrain-tileset",
         "@spacexr/tiles": "file:../spacexr-tiling/packages/tiles",
         "@spacexr/celestial-core": "file:../celestial-core",
-        "@spacexr/atmosphere": "file:../atmosphere-core",
-        "@spacexr/vector": "file:../terrain-core/packages/vector",
-        "@spacexr/ocean": "file:../ocean-core"
+        "@spacexr/vector": "file:../terrain-core/packages/vector"
     }
 }

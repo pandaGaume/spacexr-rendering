@@ -6,7 +6,7 @@ Run from `spacexr-rendering`:
 npm run example:vectors
 ```
 
-Open http://127.0.0.1:5191/. This example serves the local `terrain-core/packages/vector` and rendering sources. It uses one `createEarthRuntime` instance and its existing implicit 3D Tiles selection, DEM workers, GPU terrain, raster pages and draping tables. It adds no camera post-process or rendering pass. Atmosphere is disabled for this sample.
+Open http://127.0.0.1:5191/. This example serves the local `terrain-core/packages/vector` and rendering sources. It uses one `createEarthRuntime` instance and its existing implicit 3D Tiles selection, DEM workers, GPU terrain, raster pages and draping tables. It adds no camera post-process or rendering pass.
 
 The demonstration contains a fictional cyan trace, a yellow polygon with a transparent hole, and pink multipoints around Mont-Blanc. These are local fixtures, not surveyed trails. Actual relief uses the existing Mapzen Terrarium source on AWS Open Data, with its standard DEM pyramid. No imagery provider or vector API key is required.
 

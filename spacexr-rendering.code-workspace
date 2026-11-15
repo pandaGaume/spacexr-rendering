@@ -19,10 +19,6 @@
         {
             "name": "Celestial",
             "path": "../celestial-core"
-        },
-        {
-            "name": "Atmosphere",
-            "path": "../atmosphere-core"
         }
     ],
     "settings": {

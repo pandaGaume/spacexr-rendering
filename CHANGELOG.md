@@ -6,6 +6,11 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Removed
+
+- The ocean of `@spacexr/babylon-earth`: the `ocean` option of `createEarthRuntime`, `IEarthOceanOptions`, its engine and shader, and the `@spacexr/ocean` dependency, which is not published. The experiment is kept apart, out of `main`.
+- The atmosphere of `@spacexr/babylon-earth`, to be reintroduced later: the `atmosphere` option of `createEarthRuntime`, `atmosphereReady`, `setAtmosphereEnabled`, `setExposure`, `IEarthAtmosphereOptions`, the sky, aerial perspective and native surface bridge, the Earth ozone layer and its notices, the shader script, and the `@spacexr/atmosphere` dependency. The Sun still lights the terrain, and `setDate` moves it. The Earth example loses its atmosphere page, controls and browser qualification scripts; the CI no longer builds atmosphere-core.
+
 ### Changed
 
 - The implicit grid and Google 3D Tiles examples no longer open a browser page when their dev server starts.
@@ -15,6 +20,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ### Fixed
 
+- `@spacexr/babylon-earth` imports the terrain tilings and grid sources from `@spacexr/terrain-tileset` and `WebMercatorTileMetrics` from `@spacexr/tiles`, where they moved; it no longer built.
 - The periphery of the view, `frustumMargin`, had no margin close to the camera: it widened the projection, whose apex stays on the camera, so the margin grew with the distance and was zero at the foreground, where the finest tiles enter the image while the camera turns. For a camera orbiting a target, every plane of the view, the near plane included, now moves outward by the same distance, the margin times the half extent of the view at the target, so the foreground is loaded ahead too. A camera without a target keeps the widened projection.
 - The mesh engine overflowed the stack on large grids, when copying their normals.
 - The apparent speed of the camera sees a turn looking straight down, and the mesh engine: compares faces when it keeps old tiles, gives the tiles sharing a pole one normal, does not build a new tile twice, and counts its scan and sort in the budget of its junctions.

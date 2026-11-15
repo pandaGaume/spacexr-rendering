@@ -1,5 +1,7 @@
 # Generic framework qualification
 
+> The atmosphere of babylon-earth was removed on 2026-11-15. The atmosphere measurements below record the state before that removal.
+
 Date: 2026-11-10. The current scope is the standalone 3D Tiles and terrain framework after repository recomposition and removal of cube APIs, lunar preparation tools and implicit body defaults. The previous migration-only qualification predates this API cleanup and must not be used as evidence for current consumer compatibility.
 
 ## Current results

@@ -14,7 +14,6 @@ const owners = {
     "@spacexr/3d-tiles-babylon": "packages/core",
     "@spacexr/babylon-earth": "packages/babylon-earth",
     "@spacexr/celestial-core": "../celestial-core",
-    "@spacexr/atmosphere": "../atmosphere-core",
 };
 const scopes = [
     resolve(root, "examples/babylon-vector-terrain"),

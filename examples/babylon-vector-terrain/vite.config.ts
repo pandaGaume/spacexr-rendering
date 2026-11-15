@@ -24,7 +24,6 @@ export default defineConfig({
             "@spacexr/dem",
             "@spacexr/grid",
             "@spacexr/3d-tiles-runtime",
-            "@spacexr/atmosphere",
         ],
     },
     build: { target: "es2022", sourcemap: true },

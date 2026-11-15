@@ -4,7 +4,7 @@ The canonical package owners are `3d-tiles-core` (wire model, tiles and runtime)
 
 The subsequent cleanup removes cube APIs, datasets and sample lunar tooling from the active framework. Physical parameters are explicit: configure `GeodeticSystem`, source metrics and terrain tiling. Datum transformations and unknown-height envelopes also require caller policy. Former `TILE_METRICS` and Mapzen provider exports are no longer library defaults; the Earth sample supplies its own configuration.
 
-The optional `@spacexr/babylon-earth` composition now lives in `spacexr-rendering/packages/babylon-earth`. It combines Celestial physical descriptors, the existing tile runtime, terrain, camera and the public spectral atmosphere integration. Generic packages remain independent of any body catalogue.
+The optional `@spacexr/babylon-earth` composition now lives in `spacexr-rendering/packages/babylon-earth`. It combines Celestial physical descriptors, the existing tile runtime, terrain and camera; its atmosphere integration was removed on 2026-11-15. Generic packages remain independent of any body catalogue.
 
 Open `SpaceXR-Framework.code-workspace` for library development; the applications workspace now includes only the reference demonstrations. Body-specific Explorer and tile-service integrations remain separate projects for later work. The legacy Babylon root commands still forward to rendering.
 
