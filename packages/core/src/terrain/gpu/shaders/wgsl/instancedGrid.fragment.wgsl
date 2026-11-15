@@ -10,7 +10,7 @@ var imageryTables: texture_2d_array<f32>;
 varying vImagery: vec3f;
 #endif
 #ifndef AMBIENT_ONLY
-#ifdef RUNTIME_SELECTION
+#if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
 varying vTile: vec2f;
 varying vPage: vec4f;
 varying vUp: vec3f;
@@ -51,7 +51,7 @@ uniform imagerySize: f32;
 #endif
 
 #ifndef AMBIENT_ONLY
-#ifdef RUNTIME_SELECTION
+#if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
 // Central differences include the one-sample gutter copied from resident neighbour DEMs.
 fn sampleGradient(sample: vec2i, layer: i32) -> vec2f {
     let p = sample + vec2i(1);
@@ -164,7 +164,7 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     // Uniform white ambient illumination preserves the imagery without computing a terrain normal.
     fragmentOutputs.color = vec4f(albedo, 1.0);
 #else
-#ifdef RUNTIME_SELECTION
+#if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
     // The normal of the displaced surface reads the DEM at each pixel, not the vertices of the grid: see the GLSL shader.
     var normal: vec3f;
 #ifdef PROVIDER_NORMALS

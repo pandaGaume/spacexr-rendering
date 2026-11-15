@@ -33,18 +33,25 @@ const report = (label: string, ...results: IBenchResult[]): IBenchReport => ({ l
 describe("bench scenarios", () => {
     it("runs every view on every engine, under unique ids", () => {
         const scenarios = benchScenarios("http://localhost:5174/");
-        expect(scenarios).toHaveLength(BENCH_VIEWS.length * BENCH_ENGINES.length);
+        const mercator = BENCH_VIEWS.filter((view) => view.projection === "mercator").length;
+        expect(scenarios).toHaveLength(mercator * BENCH_ENGINES.length + (BENCH_VIEWS.length - mercator));
         expect(new Set(scenarios.map((scenario) => scenario.id)).size).toBe(scenarios.length);
     });
 
-    it("covers a turn and a zoom on Web Mercator", () => {
-        expect(BENCH_VIEWS.map((view) => view.name)).toEqual(["mont-blanc", "mont-blanc-zoom"]);
+    it("covers the places the pipeline must validate", () => {
+        expect(BENCH_VIEWS.map((view) => view.name)).toEqual(
+            expect.arrayContaining(["face-edge", "turned-edge", "cube-vertex", "pole", "cap-border"]),
+        );
+        expect(new Set(BENCH_VIEWS.map((view) => view.projection))).toEqual(new Set(["mercator", "cube"]));
     });
 
-    it("asks for the engine in the address of the example", () => {
-        const scenarios = benchScenarios("http://localhost:5174");
-        expect(scenarios.find((scenario) => scenario.id === "mont-blanc/mesh")!.url).toContain("http://localhost:5174/?engine=mesh&");
-        expect(scenarios.find((scenario) => scenario.id === "mont-blanc/gpu")!.url).toContain("engine=gpu");
+    it("runs the cube in the Moon example with its dataset, and Web Mercator in the implicit grid example", () => {
+        const scenarios = benchScenarios("http://localhost:5174", "http://127.0.0.1:8793");
+        const cube = scenarios.find((scenario) => scenario.id === "pole/gpu")!;
+        expect(cube.url).toContain("http://localhost:5176/?dataset=http://127.0.0.1:8793&solid=1&");
+        expect(scenarios.some((scenario) => scenario.id === "pole/mesh")).toBe(false);
+        expect(scenarios.find((scenario) => scenario.id === "mont-blanc/gpu")!.url).toContain("http://localhost:5174/?engine=gpu&");
+        expect(benchScenarios("http://localhost:5174").find((scenario) => scenario.id === "pole/gpu")!.url).not.toContain("dataset");
     });
 });
 

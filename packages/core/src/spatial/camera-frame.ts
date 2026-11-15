@@ -56,6 +56,9 @@ function peripheryPlanes(camera: Camera, margin: number): IPlane[] {
  */
 export function createEcefCameraFrame(camera: Camera, engine: AbstractEngine, options: IEcefCameraFrameOptions = {}): IEcefCameraFrame {
     const margin = options.frustumMargin ?? 0;
+    const frustumPlanes = Frustum.GetPlanes(camera.getTransformationMatrix()).map(planeToRuntimePlane);
+    // The near plane faces the view: its unit normal is the direction of the view, whatever the handedness of the scene.
+    const near = frustumPlanes[0]!;
     return {
         id: camera.id,
         position: {
@@ -65,7 +68,8 @@ export function createEcefCameraFrame(camera: Camera, engine: AbstractEngine, op
         },
         viewportHeight: engine.getRenderHeight() * camera.viewport.height,
         verticalFovRadians: camera.fov,
-        frustumPlanes: Frustum.GetPlanes(camera.getTransformationMatrix()).map(planeToRuntimePlane),
+        forward: { x: near.x, y: near.y, z: near.z },
+        frustumPlanes,
         ...(margin > 0 ? { peripheryFrustumPlanes: peripheryPlanes(camera, margin) } : {}),
         timestamp: performance.now(),
     };

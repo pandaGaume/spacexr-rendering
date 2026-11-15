@@ -11,7 +11,7 @@ var imageryTables: texture_2d_array<f32>;
 varying vImagery: vec3f;
 #endif
 #ifndef AMBIENT_ONLY
-#ifdef RUNTIME_SELECTION
+#if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
 varying vTile: vec2f;
 varying vPage: vec4f;
 varying vUp: vec3f;
@@ -48,7 +48,7 @@ var imagerySampler: sampler;
 uniform imagerySize: f32;
 #endif
 #ifndef AMBIENT_ONLY
-#ifdef RUNTIME_SELECTION
+#if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
 fn sampleGradient(sample: vec2i, layer: i32) -> vec2f {
 let p = sample + vec2i(1);
 let west = textureLoad(elevations, p - vec2i(1, 0), layer, 0).r;
@@ -148,7 +148,7 @@ albedo=select(pow((albedo+vec3f(0.055))/1.055,vec3f(2.4)),albedo/12.92,albedo<=v
 #ifdef AMBIENT_ONLY
 fragmentOutputs.color = vec4f(albedo, 1.0);
 #else
-#ifdef RUNTIME_SELECTION
+#if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
 var normal: vec3f;
 #ifdef PROVIDER_NORMALS
 if (!providerNormal(&normal)) {

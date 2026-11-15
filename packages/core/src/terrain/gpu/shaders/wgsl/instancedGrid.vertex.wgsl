@@ -46,7 +46,11 @@ varying vImagery: vec3f;
 #endif
 
 #ifndef AMBIENT_ONLY
-#ifdef RUNTIME_SELECTION
+#ifdef RADIAL_HEIGHTS
+// Inverse squared radii of the reference surface.
+uniform inverseRadiiSquared: vec3f;
+#endif
+#if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
 varying vTile: vec2f;
 varying vPage: vec4f;
 varying vUp: vec3f;
@@ -88,10 +92,23 @@ fn elevationAt(h: vec2i) -> vec4f {
 fn heightIn(reference: vec4f, uv: vec2f) -> f32 {
     if (reference.w < 0.0) { return 0.0; }
     let size = f32(i32(textureDimensions(elevations, 0).x) - 2);
+#ifdef RADIAL_HEIGHTS
+    let turns = i32(fract(reference.w) * 4.0 + 0.5);
+    var turned = uv;
+    if (turns == 1) { turned = vec2f(1.0 - uv.y, uv.x); }
+    else if (turns == 2) { turned = vec2f(1.0 - uv.x, 1.0 - uv.y); }
+    else if (turns == 3) { turned = vec2f(uv.y, 1.0 - uv.x); }
+    let texel = (reference.xy + turned * reference.z) * (size - 1.0);
+#else
     let texel = (reference.xy + uv * reference.z) * (size - 1.0);
+#endif
     let cell = clamp(vec2i(floor(texel)), vec2i(0), vec2i(i32(size) - 2));
     let f = clamp(texel - vec2f(cell), vec2f(0.0), vec2f(1.0));
+#ifdef RADIAL_HEIGHTS
+    let layer = i32(floor(reference.w));
+#else
     let layer = i32(reference.w + 0.5);
+#endif
     // One-sample gutter surrounds the point DEM.
     let base = cell + vec2i(1);
     let h00 = textureLoad(elevations, base, layer, 0).r;
@@ -156,8 +173,12 @@ fn mercatorSurface(uv: vec2f, surfaceInfo: ptr<function, vec4f>) -> vec3f {
 fn sampledPosition(h: vec2i) -> vec3f {
     let uv = vec2f(h) / f32(steps());
     let shape = textureLoad(shapes, h, i32(vertexInputs.instPlace.w + 0.5), 0);
+#ifdef RADIAL_HEIGHTS
+    let up = normalize(vertexInputs.instRotation.xyz + shape.xyz);
+#else
     let longitude = (uv.x - 0.5) * vertexInputs.instRotation.z;
     let up = vec3f(cos(shape.w) * cos(longitude), cos(shape.w) * sin(longitude), sin(shape.w));
+#endif
     return shape.xyz + up * heightIn(elevationAt(h), uv);
 }
 
@@ -181,12 +202,35 @@ fn positionAt(lattice: vec2i) -> vec3f {
     }
     return sampledPosition(h);
 }
+
+#ifndef AMBIENT_ONLY
+#ifdef RADIAL_HEIGHTS
+// Position of a lattice point on the reference surface, relative to the tile centre.
+fn shapePosition(h: vec2i) -> vec3f {
+    return textureLoad(shapes, h, i32(vertexInputs.instPlace.w + 0.5), 0).xyz;
+}
+
+// Tangent of the reference surface per unit of tile coordinate, along the chord between two lattice points clamped to
+// the tile: see the GLSL shader.
+fn surfaceTangent(before: vec2i, after: vec2i, normal: vec3f) -> vec3f {
+    let last = steps();
+    let first = clamp(before, vec2i(0), vec2i(last));
+    let second = clamp(after, vec2i(0), vec2i(last));
+    let chord = (shapePosition(second) - shapePosition(first)) * f32(last) / f32(second.x - first.x + second.y - first.y);
+    return chord - normal * dot(chord, normal);
+}
+#endif
+#endif
 #endif
 
 // Rotation about the polar axis by the longitude of the tile centre.
 fn rotate(p: vec3f) -> vec3f {
+#ifdef RADIAL_HEIGHTS
+    return p;
+#else
     let rotation = vertexInputs.instRotation;
     return vec3f(rotation.x * p.x - rotation.y * p.y, rotation.y * p.x + rotation.x * p.y, p.z);
+#endif
 }
 
 @vertex
@@ -208,7 +252,20 @@ fn main(input: VertexInputs) -> FragmentInputs {
 #ifdef PROVIDER_NORMALS
     vertexOutputs.vNormalPage = vertexInputs.instNormal;
 #endif
-#ifdef RUNTIME_SELECTION
+#ifdef RADIAL_HEIGHTS
+    // The fragment stage computes the normal from the DEM: it needs the tangents of the reference surface and the page.
+    let body = vertexInputs.instRotation.xyz + shapePosition(h);
+    let surfaceNormal = normalize(body * uniforms.inverseRadiiSquared);
+    vertexOutputs.vUp = normalize(body);
+    vertexOutputs.vEast = surfaceTangent(h - vec2i(2, 0), h + vec2i(2, 0), surfaceNormal);
+    vertexOutputs.vSouth = surfaceTangent(h - vec2i(0, 2), h + vec2i(0, 2), surfaceNormal);
+    vertexOutputs.vTile = uv;
+    vertexOutputs.vPage = vertexInputs.instElevation;
+    vertexOutputs.vEdgeN = vertexInputs.instEdgeN;
+    vertexOutputs.vEdgeE = vertexInputs.instEdgeE;
+    vertexOutputs.vEdgeS = vertexInputs.instEdgeS;
+    vertexOutputs.vEdgeW = vertexInputs.instEdgeW;
+#elif defined(RUNTIME_SELECTION)
     let sine = surfaceInfo.x;
     let cosine = surfaceInfo.y;
     let denominator = surfaceInfo.w;

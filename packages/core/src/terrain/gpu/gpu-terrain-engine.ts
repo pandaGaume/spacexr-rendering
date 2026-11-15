@@ -16,8 +16,8 @@ import type {
     ITilePresentationContext,
     VerticalScale,
 } from "@spacexr/3d-tiles-runtime";
-import { DrapeInstanceCut, type IDrapeInstance } from "@spacexr/raster";
-import { tileAddressKey as key } from "@spacexr/tiles";
+import { completeTileCover, DrapeInstanceCut, type IDrapeInstance } from "@spacexr/raster";
+import { parentTileAddress, tileAddressKey as key } from "@spacexr/tiles";
 
 import { type ITerrainTiling } from "@spacexr/terrain-tileset";
 import type { IBabylonTileResourceStatistics } from "../../monitor/runtime-monitor";
@@ -103,7 +103,8 @@ interface IPlacedInstance {
  * balances its instances, and reads their reference-surface shapes from texture arrays. Both paths use the same
  * activation and presentation ports and keep elevation sources independent of geometric tile addresses.
  *
- * Its shaders are written twice, in GLSL for WebGL and in WGSL for WebGPU, and compute the same values.
+ * Its shaders are written twice, in GLSL for WebGL and in WGSL for WebGPU, and compute the same values, radial heights
+ * included.
  */
 export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
     public readonly name = "gpu";
@@ -135,6 +136,7 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
     private readonly verticalScale: VerticalScale;
     private readonly stopVerticalScale: () => void;
     /** DEM tiles of the cover being loaded. */
+    private readonly fillRequests = new Set<string>();
     private dirty = true;
     private created = 0;
     private released = 0;
@@ -151,6 +153,8 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
         this.normals =
             this.runtimeSelection && inputs.normalPages && !this.ambientLighting ? new GpuTerrainNormals(inputs.normalPages) : undefined;
         this.normalObserver = this.normals?.pages.changed.add(() => (this.normalsDirty = true));
+        if (this.runtimeSelection && this.tiling.radialHeights)
+            throw new RangeError("Runtime-selected GPU geometry is currently supported for Web Mercator only.");
         this.drape =
             this.runtimeSelection && this.imageryPages
                 ? new GpuRasterDrape(this.scene, this.imageryPages, TERRAIN_CONFIG.imagery.maxDrapeDepth)
@@ -162,8 +166,8 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
         });
         this.cut = new DrapeInstanceCut({
             topology: this.tiling.topology,
-            // Elevation may be deeper in places: both sides of an edge read the coarser data.
-            ...(this.runtimeSelection && inputs.elevation
+            // Elevation may be deeper in places: both sides of an edge read the coarser data, on a tiling covering a body.
+            ...((this.tiling.coverRoots || this.runtimeSelection) && inputs.elevation
                 ? { terrainDataLevel: (terrain: ITileAddress) => inputs.elevation!.pyramid.rasters.areaOf(terrain).ancestor.lod }
                 : {}),
             maxDepth: options.maxInstanceDepth ?? TERRAIN_CONFIG.gpu.maxInstanceDepth,
@@ -217,6 +221,7 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
                 defines: [
                     ...(inputs.linearColorOutput ? ["#define SCENE_LINEAR_COLOR"] : []),
                     ...(this.imageryPages ? ["#define IMAGERY"] : []),
+                    ...(this.tiling.radialHeights ? ["#define RADIAL_HEIGHTS"] : []),
                     ...(this.runtimeSelection ? ["#define RUNTIME_SELECTION"] : []),
                     ...(this.ambientLighting ? ["#define AMBIENT_ONLY"] : []),
                     ...(this.normals ? ["#define PROVIDER_NORMALS"] : []),
@@ -293,9 +298,26 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
                     // The tile starts at 0/0; its DEM gives the measured height range.
                     ...(heights && !Number.isNaN(heights.range.minimum) && !Number.isNaN(heights.range.maximum)
                         ? {
-                              tileBoundingVolume: () => ({
-                                  region: regionWithHeights(tileRegion(context), heights.range, this.verticalScale.value),
-                              }),
+                              tileBoundingVolume: () =>
+                                  this.tiling.boundingBox
+                                      ? {
+                                            box: this.tiling.boundingBox(
+                                                identity,
+                                                heights.range.minimum * this.verticalScale.value,
+                                                heights.range.maximum * this.verticalScale.value,
+                                            ) as never,
+                                        }
+                                      : { region: regionWithHeights(tileRegion(context), heights.range, this.verticalScale.value) },
+                              // Web Mercator reads its heights from its region.
+                              ...(this.tiling.boundingBox
+                                  ? {
+                                        tileHeightRange: () =>
+                                            [
+                                                heights.range.minimum * this.verticalScale.value,
+                                                heights.range.maximum * this.verticalScale.value,
+                                            ] as const,
+                                    }
+                                  : {}),
                           }
                         : {}),
                 });
@@ -431,7 +453,9 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
         this.dirty = false;
         const terrain = [...this.presented.values()].map((handle) => handle.identity);
         const imagery = this.imageryPages ? this.imageryPages.presented.addresses() : [];
-        const instances = this.runtimeSelection ? this.cut.connectTerrain(terrain) : this.cut.update(terrain, imagery, now);
+        const instances = this.runtimeSelection
+            ? this.cut.connectTerrain(terrain)
+            : this.cut.update([...terrain, ...this.coverFill(terrain)], imagery, now);
         this.pickSurface.update(terrain);
         this.drape?.sync(terrain);
         this.normals?.sync(terrain);
@@ -472,18 +496,21 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
                 normalAreas?.set(this.normalArea(address), offset);
                 place[offset + 3] = this.shapes?.acquire(address) ?? 0;
                 const center = this.tiling.center(address);
-                const longitude = this.tiling.rotation(address);
-                const span = (2 * Math.PI) / 2 ** address.lod;
-                rotation.set([Math.cos(longitude), Math.sin(longitude), span, instance.finerEdges], offset);
-                if (this.runtimeSelection) {
-                    const q = Math.PI * (1 - (2 * (address.y + 0.5)) / 2 ** address.lod);
-                    const latitude = Math.atan(Math.sinh(q));
-                    const sine = Math.sin(latitude),
-                        cosine = Math.cos(latitude);
-                    const radii = this.tiling.referenceRadii!;
-                    const e2 = 1 - (radii[2] / radii[0]) ** 2;
-                    const normalRadius = radii[0] / Math.sqrt(1 - e2 * sine * sine);
-                    surface!.set([q, sine, cosine, normalRadius], offset);
+                if (this.tiling.radialHeights) rotation.set([center.x, center.y, center.z, instance.finerEdges], offset);
+                else {
+                    const longitude = this.tiling.rotation(address);
+                    const span = (2 * Math.PI) / 2 ** address.lod;
+                    rotation.set([Math.cos(longitude), Math.sin(longitude), span, instance.finerEdges], offset);
+                    if (this.runtimeSelection) {
+                        const q = Math.PI * (1 - (2 * (address.y + 0.5)) / 2 ** address.lod);
+                        const latitude = Math.atan(Math.sinh(q));
+                        const sine = Math.sin(latitude),
+                            cosine = Math.cos(latitude);
+                        const radii = this.tiling.referenceRadii!;
+                        const e2 = 1 - (radii[2] / radii[0]) ** 2;
+                        const normalRadius = radii[0] / Math.sqrt(1 - e2 * sine * sine);
+                        surface!.set([q, sine, cosine, normalRadius], offset);
+                    }
                 }
                 if (this.drape) {
                     const binding = this.drape.binding(address);
@@ -536,6 +563,35 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
     }
 
     /**
+     * Tiles drawn where the selection left no tile, on a tiling covering a whole body: a selection is computed for a camera
+     * that has since moved, and coarse terrain is better than a hole at the edges of the image. A tile whose DEM is not in
+     * memory is requested, and reads the DEM of its nearest ancestor in memory until it arrives.
+     */
+    private coverFill(terrain: readonly ITileAddress[]): ITileAddress[] {
+        const roots = this.tiling.coverRoots;
+        const pyramid = this.elevation?.pyramid;
+        if (!roots || !pyramid) return [];
+        return completeTileCover(terrain, roots, (address) => {
+            if (pyramid.isResident(address)) return true;
+            const requestKey = key(address);
+            if (!this.fillRequests.has(requestKey)) {
+                this.fillRequests.add(requestKey);
+                void pyramid
+                    .tileHeights(address)
+                    .catch((error: unknown) => console.error("A terrain tile of the cover failed", error))
+                    .finally(() => {
+                        this.fillRequests.delete(requestKey);
+                        this.dirty = true;
+                    });
+            }
+            for (let ancestor = parentTileAddress(address); ancestor; ancestor = parentTileAddress(ancestor)) {
+                if (pyramid.isResident(ancestor)) return true;
+            }
+            return false;
+        });
+    }
+
+    /**
      * Area of a tile in the DEM tile serving a terrain tile and the layer of its page, acquiring the page.
      *
      * @returns `undefined` when there is no elevation or the DEM tile is not in memory.
@@ -546,8 +602,15 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
         demTiles: ITileAddress[],
     ): [number, number, number, number] | undefined {
         if (!this.elevation) return undefined;
-        const demTile = this.elevation.pyramid.rasters.areaOf(terrain).ancestor;
-        const layer = this.elevations.acquire(demTile);
+        let demTile = this.elevation.pyramid.rasters.areaOf(terrain).ancestor;
+        let layer = this.elevations.acquire(demTile);
+        // On a tiling covering a whole body, a tile of the cover reads its nearest ancestor until its DEM arrives.
+        while (layer === undefined && this.tiling.coverRoots) {
+            const parent = parentTileAddress(demTile);
+            if (!parent) break;
+            demTile = parent;
+            layer = this.elevations.acquire(demTile);
+        }
         if (layer === undefined) return undefined;
         demTiles.push(demTile);
         // The tile is never coarser than the DEM tile; it may lie outside it, on its edge, for a neighbour's DEM, turned

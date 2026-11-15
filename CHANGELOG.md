@@ -13,6 +13,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ### Changed
 
+- The terrain bench runs its cube paths on the Moon example, port 5176 (`--moon-url`), on the GPU engine; Web Mercator stays on the implicit grid example.
 - The implicit grid and Google 3D Tiles examples no longer open a browser page when their dev server starts.
 - The GPU terrain engine and the imagery drape of the mesh engine run WGSL shaders on the WebGPU engine, and their GLSL shaders on WebGL. Each GLSL shader has a WGSL twin under `shaders/wgsl`, which computes the same values in the same order, for every define: runtime and legacy geometry, imagery, Mapzen and DEM normals, ambient light. The drape plugin declares both languages, and its materials are no longer created with `forceGLSL`. WGSL modules of the shader tool export their constant with a `WGSL` suffix, as Babylon.js does.
 - The implicit grid example draws each frame between `beginFrame` and `endFrame`, once the selection of its camera is ready. It drew after the frame of the render loop had ended, and WebGPU then drew nothing: its canvas texture was presented before the commands were submitted.
@@ -27,6 +28,8 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ### Added
 
+- `@spacexr/babylon-moon`: a body on the cube index in a Babylon scene, poles included, from a tile service (`loadMoonBody`) or a DEM supplied by the caller, with one terrain TileRuntime balanced across the faces of the cube, an imagery runtime, a camera orbiting across the poles and a Sun. `examples/babylon-moon` shows it, on a synthetic Moon or a published dataset, with a scale and altitude display shared with the other examples in `examples/shared/view-hud`.
+- The GPU terrain engine draws radial heights for tilings that have them, such as the cube: heights along the direction from the centre, DEM pages read turned across faces, normals from the DEM at each pixel. Its WGSL twins compute them too, so the cube runs WGSL on WebGPU.
 - `levelDrops` and `framesWithDrops` of the terrain bench count visible drawn tiles replaced by one of their ancestors from one frame to the next, the columns `drops` and `drop frames`, next to `hole frames`.
 - `npm run compare:renderers` draws the views of the bench at rest with WebGL from GLSL and with WebGPU from WGSL, in headless Chrome, and compares them pixel by pixel, on both engines, shaded, draped and in wireframe. It fails when a page runs another graphics API or shader language, or logs a WebGPU validation error. Without multisampling, 45 to 2 471 pixels of 905 760 differ per case on the views `mont-blanc` and `mont-blanc-zoom`, mostly by one level of 255, and wireframe lines move by a pixel. `antialias=0` of the implicit grid example disables multisampling for that comparison; antialiasing stays on by default. See `packages/tools/README.md` and the terrain test log of 3d-tiles-core.
 - New terrain refinements follow the apparent speed of the camera: `MotionRefinementScale` and `motion` of `BabylonRuntimeDriver`. The threshold of new detail rises up to 4 times while the view moves fast and comes back when it stops, which is set in `motion` of `terrain-config.json`. On the paths of the bench, the GPU engine loads up to 43 % fewer tiles in motion and keeps its threshold at rest.
