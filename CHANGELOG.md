@@ -13,6 +13,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ### Changed
 
+- `npm run check` no longer builds the production bundles of the examples, which took half of it; `npm run build:examples` does. The CI builds them in a parallel job, one example per runner, caches npm downloads, shares the setup of the sibling repositories in `.github/actions/framework`, and stops the run of a commit replaced by a new push.
 - The terrain bench runs its cube paths on the Moon example, port 5176 (`--moon-url`), on the GPU engine and only with `--dataset`, the tiles of a tile service; Web Mercator stays on the implicit grid example.
 - The implicit grid and Google 3D Tiles examples no longer open a browser page when their dev server starts.
 - The GPU terrain engine and the imagery drape of the mesh engine run WGSL shaders on the WebGPU engine, and their GLSL shaders on WebGL. Each GLSL shader has a WGSL twin under `shaders/wgsl`, which computes the same values in the same order, for every define: runtime and legacy geometry, imagery, Mapzen and DEM normals, ambient light. The drape plugin declares both languages, and its materials are no longer created with `forceGLSL`. WGSL modules of the shader tool export their constant with a `WGSL` suffix, as Babylon.js does.

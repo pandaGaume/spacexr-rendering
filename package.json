@@ -24,7 +24,8 @@
     "scripts": {
         "shaders": "npm run shaders --workspace @spacexr/3d-tiles-babylon",
         "shaders:watch": "npm run shaders:watch --workspace @spacexr/3d-tiles-babylon",
-        "build": "npm run build --workspaces --if-present",
+        "build": "npm run build --workspace=packages --if-present",
+        "build:examples": "npm run build --workspace=examples --if-present",
         "clean": "npm run clean --workspaces --if-present",
         "typecheck": "npm run typecheck --workspaces --if-present",
         "test": "npm run test --workspaces --if-present",
@@ -46,8 +47,8 @@
         "example:earth": "npm run open --workspace @spacexr/example-babylon-earth",
         "example:earth:preview": "npm run preview --workspace @spacexr/example-babylon-earth",
         "example:earth:orbit": "npm run dev --workspace @spacexr/example-babylon-earth -- --open /orbital.html",
-        "example:moon": "npm run dev --workspace @spacexr/example-babylon-moon",
-        "example:mars": "npm run dev --workspace @spacexr/example-babylon-mars",
+        "example:moon": "npm run dev --workspace @spacexr/example-babylon-moon -- --open",
+        "example:mars": "npm run dev --workspace @spacexr/example-babylon-mars -- --open",
         "example:vectors": "npm run dev --workspace @spacexr/example-babylon-vector-terrain",
         "example:vectors:preview": "npm run preview --workspace @spacexr/example-babylon-vector-terrain"
     },

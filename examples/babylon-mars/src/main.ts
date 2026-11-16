@@ -16,6 +16,8 @@ import { clearMonitorPanel, renderMonitorPanel } from "../../babylon-implicit-gr
 import { ViewHud } from "../../shared/view-hud/view-hud";
 import DemDecoderWorker from "./dem-decoder.worker?worker";
 
+const DEFAULT_DATASET = "https://pub-d96348c50a354038a1df6f85e91e45c9.r2.dev/cube/mars/datasets/mars/global-0baf76880ef90d80ea3c/";
+
 function requiredElement<T extends HTMLElement>(id: string, type: new () => T): T {
     const element = document.getElementById(id);
     if (!(element instanceof type)) throw new Error(`Missing element #${id}.`);
@@ -42,9 +44,8 @@ async function run(): Promise<void> {
         frame: requiredElement("frame-statistics", HTMLSpanElement),
     };
     const parameters = new URLSearchParams(window.location.search);
-    // `dataset` names the folder of a revision of a tile service, which holds its descriptors.
-    const service = parameters.get("dataset");
-    if (!service) throw new RangeError("Give the folder of a Mars revision of a tile service with ?dataset=.");
+    // Override the published R2 revision with ?dataset=<folder>.
+    const service = parameters.get("dataset") || DEFAULT_DATASET;
     // `renderer=webgpu` runs the WGSL shaders on the WebGPU engine of Babylon where the browser supports it.
     const antialias = parameters.get("antialias") !== "0";
     const { engine, renderer } = await createGeospatialRendererEngine(

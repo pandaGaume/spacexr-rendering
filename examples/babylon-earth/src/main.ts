@@ -29,6 +29,37 @@ function report(error: unknown): void {
     console.error(error);
 }
 
+/** A number of the query in its unit, or the fallback when the query does not give it. */
+function numberParameter(query: URLSearchParams, name: string, fallback: number): number {
+    const value = query.get(name);
+    if (value === null) return fallback;
+    const number = Number(value);
+    if (value.trim() === "" || !Number.isFinite(number)) throw new RangeError(`${name} must be a number.`);
+    return number;
+}
+
+/** An angle of the query, given in degrees, in radians; the fallback, in radians, when the query does not give it. */
+function angleParameter(query: URLSearchParams, name: string, fallbackRadians: number): number {
+    return query.has(name) ? (numberParameter(query, name, 0) * Math.PI) / 180 : fallbackRadians;
+}
+
+/**
+ * The point the camera aims at when `lat` and `lon` are given, in degrees, at `height` metres, 0 by default; undefined
+ * otherwise, and the view keeps its own point.
+ */
+function placeParameter(query: URLSearchParams): { latitudeDegrees: number; longitudeDegrees: number; heightMeters: number } | undefined {
+    if (!query.has("lat") && !query.has("lon")) return undefined;
+    if (!query.has("lat") || !query.has("lon")) throw new RangeError("lat and lon must be given together, in degrees.");
+    const place = {
+        latitudeDegrees: numberParameter(query, "lat", 0),
+        longitudeDegrees: numberParameter(query, "lon", 0),
+        heightMeters: numberParameter(query, "height", 0),
+    };
+    if (Math.abs(place.latitudeDegrees) > 90 || Math.abs(place.longitudeDegrees) > 180)
+        throw new RangeError("lat must be between -90 and 90 degrees, and lon between -180 and 180.");
+    return place;
+}
+
 export type EarthDemoView = "orbit";
 
 async function run(_initialView: EarthDemoView): Promise<void> {
@@ -91,21 +122,26 @@ async function run(_initialView: EarthDemoView): Promise<void> {
             throw new RangeError("hour must be between 0 and 24 UTC.");
         const initialDate = new Date(Date.UTC(2026, 5, 21) + initialHour * 3600000);
         document.querySelector("h1")!.textContent = inside ? "Relief de la Terre" : "Terre depuis l’orbite";
+        // `lat`, `lon` and `height` move the point the view aims at; `radius`, `pitch` and `yaw` replace its own.
+        const radius = numberParameter(query, "radius", terrainView ? 35000 : horizonView ? 1800000 : 12000000);
+        if (radius <= 0) throw new RangeError("radius must be a positive distance in metres.");
         earth = await createEarthRuntime(scene, {
             date: initialDate,
             camera: {
-                target: terrainView
-                    ? {
-                          latitudeDegrees: 45.8326,
-                          longitudeDegrees: 6.8652,
-                          heightMeters: dem ? 4808 : 0,
-                      }
-                    : horizonView
-                      ? { latitudeDegrees: 45, longitudeDegrees: 5 }
-                      : { latitudeDegrees: 25, longitudeDegrees: 0 },
-                radius: terrainView ? 35000 : horizonView ? 1800000 : 12000000,
-                pitchRadians: terrainView ? (80 * Math.PI) / 180 : horizonView ? (85 * Math.PI) / 180 : 0,
-                yawRadians: horizonView ? 1.1 : 0,
+                target:
+                    placeParameter(query) ??
+                    (terrainView
+                        ? {
+                              latitudeDegrees: 45.8326,
+                              longitudeDegrees: 6.8652,
+                              heightMeters: dem ? 4808 : 0,
+                          }
+                        : horizonView
+                          ? { latitudeDegrees: 45, longitudeDegrees: 5 }
+                          : { latitudeDegrees: 25, longitudeDegrees: 0 }),
+                radius,
+                pitchRadians: angleParameter(query, "pitch", terrainView ? (80 * Math.PI) / 180 : horizonView ? (85 * Math.PI) / 180 : 0),
+                yawRadians: angleParameter(query, "yaw", horizonView ? 1.1 : 0),
                 attachControl: true,
                 radiusMin: 100,
             },
