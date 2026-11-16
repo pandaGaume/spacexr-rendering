@@ -47,8 +47,8 @@
         "example:earth": "npm run open --workspace @spacexr/example-babylon-earth",
         "example:earth:preview": "npm run preview --workspace @spacexr/example-babylon-earth",
         "example:earth:orbit": "npm run dev --workspace @spacexr/example-babylon-earth -- --open /orbital.html",
-        "example:moon": "npm run dev --workspace @spacexr/example-babylon-moon",
-        "example:mars": "npm run dev --workspace @spacexr/example-babylon-mars",
+        "example:moon": "npm run dev --workspace @spacexr/example-babylon-moon -- --open",
+        "example:mars": "npm run dev --workspace @spacexr/example-babylon-mars -- --open",
         "example:vectors": "npm run dev --workspace @spacexr/example-babylon-vector-terrain",
         "example:vectors:preview": "npm run preview --workspace @spacexr/example-babylon-vector-terrain"
     },
