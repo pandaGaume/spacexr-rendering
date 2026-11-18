@@ -17,9 +17,10 @@ import type {
     VerticalScale,
 } from "@spacexr/3d-tiles-runtime";
 import { completeTileCover, DrapeInstanceCut, type IDrapeInstance } from "@spacexr/raster";
+import { createGridTopology, type IGridTopology } from "@spacexr/grid";
 import { parentTileAddress, tileAddressKey as key } from "@spacexr/tiles";
 
-import { type ITerrainTiling } from "@spacexr/terrain-tileset";
+import { TerrainPickPatch, pickTerrain, type ITerrainPickHit, type ITerrainRay, type ITerrainTiling } from "@spacexr/terrain-tileset";
 import type { IBabylonTileResourceStatistics } from "../../monitor/runtime-monitor";
 import type { BabylonRasterPages } from "../../raster/raster-pages";
 import { sharedVerticalScale } from "../mesh/geodesic-grid-pipeline";
@@ -66,6 +67,8 @@ export interface IGpuTerrainHandle {
     presented: boolean;
     /** A ready runtime tile keeps its height source resident while it can be used as a fallback. */
     demRetained?: boolean;
+    /** Coarse pick surface, built once from the DEM when the tile is activated. */
+    pick?: TerrainPickPatch;
 }
 
 type Activation = ITileActivationContext<IEcefSpatialState, IGpuTerrainHandle, never>;
@@ -115,6 +118,7 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
     /** Shared topology groups; their total count is the geometry count, independent of imagery depth. */
     public readonly grids = new Map<number, InstancedGrid>();
     public readonly pickSurface: PickSurface;
+    private readonly pickTopology: IGridTopology;
     private readonly scene: Scene;
     private readonly root: TransformNode | undefined;
     private readonly tiling: ITerrainTiling;
@@ -162,7 +166,8 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
         this.verticalScale = sharedVerticalScale(inputs.elevation?.verticalScale);
         this.stopVerticalScale = this.verticalScale.subscribe((scale) => {
             this.material.setFloat("verticalScale", scale);
-            this.pickSurface.setVerticalScale(scale);
+            for (const handle of this.handles) handle.pick?.setVerticalScale(scale);
+            this.updatePickSurface();
         });
         this.cut = new DrapeInstanceCut({
             topology: this.tiling.topology,
@@ -181,14 +186,8 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
             options.elevationPageSize ?? TERRAIN_CONFIG.dem.tileCells + 1,
             this.tiling,
         );
-        this.pickSurface = new PickSurface(
-            this.scene,
-            inputs.elevation?.pyramid,
-            this.verticalScale.value,
-            options.pickCells ?? TERRAIN_CONFIG.gpu.pickCells,
-            this.tiling,
-            this.root,
-        );
+        this.pickTopology = createGridTopology(options.pickCells ?? TERRAIN_CONFIG.gpu.pickCells);
+        this.pickSurface = new PickSurface(this.scene, this.root);
 
         const wgsl = this.scene.getEngine().isWebGPU;
         this.material = new ShaderMaterial(
@@ -283,7 +282,19 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
                 }
                 if (this.runtimeSelection && this.elevation && !heights)
                     throw new Error(`No DEM or ancestor is available for terrain tile ${key(identity)}.`);
-                const handle: IGpuTerrainHandle = { identity, presented: false };
+                const pyramid = this.elevation?.pyramid;
+                // Sampled once, with the bounding volume: the DEM may leave the cache later, the pick surface stays.
+                const handle: IGpuTerrainHandle = {
+                    identity,
+                    presented: false,
+                    pick: new TerrainPickPatch(
+                        this.tiling,
+                        this.pickTopology,
+                        identity,
+                        (x, y, face) => pyramid?.heightAt(x, y, identity.lod, face) ?? 0,
+                        this.verticalScale.value,
+                    ),
+                };
                 if (this.runtimeSelection && this.elevation) {
                     this.elevation.pyramid.retain(identity);
                     handle.demRetained = true;
@@ -343,9 +354,7 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
             // A tile shown again after its DEM left the cache reloads it, then reads it again.
             if (pyramid && !pyramid.isResident(handle.identity))
                 void pyramid.tileHeights(handle.identity).then(() => {
-                    if (!handle.presented) return;
-                    this.pickSurface.refresh(handle.identity);
-                    this.dirty = true;
+                    if (handle.presented) this.dirty = true;
                 });
             this.dirty = true;
         }
@@ -390,6 +399,14 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
 
     public setVerticalScale(scale: number): void {
         this.verticalScale.set(scale);
+    }
+
+    /**
+     * Nearest presented terrain crossed by a ray, without any scene object: the pick patches built with each tile are
+     * intersected directly. The ray is in the body-fixed frame of the selection and DEM addresses, in metres.
+     */
+    public pickTerrain(ray: ITerrainRay): ITerrainPickHit | undefined {
+        return pickTerrain(this.presentedPatches(), ray);
     }
 
     public dispose(): void {
@@ -439,6 +456,14 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
         return wasPresented;
     }
 
+    private *presentedPatches(): Generator<TerrainPickPatch> {
+        for (const handle of this.presented.values()) if (handle.pick) yield handle.pick;
+    }
+
+    private updatePickSurface(): void {
+        this.pickSurface.update(this.presentedPatches());
+    }
+
     /** Addresses actually drawn, so the two backends can be checked against the published runtime cut. */
     public get geometryTiles(): readonly ITileAddress[] {
         return this.placed.map(({ instance }) => instance.address);
@@ -456,7 +481,7 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
         const instances = this.runtimeSelection
             ? this.cut.connectTerrain(terrain)
             : this.cut.update([...terrain, ...this.coverFill(terrain)], imagery, now);
-        this.pickSurface.update(terrain);
+        this.updatePickSurface();
         this.drape?.sync(terrain);
         this.normals?.sync(terrain);
 
