@@ -54,7 +54,7 @@
         "prepublishOnly": "npm run lint && npm run typecheck && npm run test && npm run build"
     },
     "peerDependencies": {
-        "@babylonjs/core": "~9.33.1"
+        "@babylonjs/core": "~9.36.0"
     },
     "dependencies": {
         "@spacexr/3d-tiles-core": "0.1.0",
@@ -67,7 +67,7 @@
         "@spacexr/geodesy": "0.4.0"
     },
     "devDependencies": {
-        "@babylonjs/core": "~9.33.1",
+        "@babylonjs/core": "~9.36.0",
         "@babylonjs/loaders": "^9.33.1",
         "@types/node": "^20.11.0",
         "@typescript-eslint/eslint-plugin": "^7.0.0",
