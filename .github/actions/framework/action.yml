@@ -23,6 +23,12 @@ runs:
       with:
         repository: pandaGaume/celestial-core
         path: celestial-core
+    # The excavation example enters a headset with the helper and the server settings of the spatial-display
+    # examples, read from their sources: nothing to build.
+    - uses: actions/checkout@v7
+      with:
+        repository: pandaGaume/spatial-display
+        path: spatial-display
     # Downloads are cached across runs, keyed on every lockfile: npm ci then installs from the cache.
     - uses: actions/setup-node@v5
       with:
