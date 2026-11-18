@@ -46,7 +46,6 @@ After the framework setup, run a shortcut from `spacexr-rendering`:
 | Implicit terrain | `npm run example:implicit-grid`   |
 | Google 3D Tiles  | `npm run example:google-3d-tiles` |
 | Draped vectors   | `npm run example:vectors`         |
-| Underground rock | `npm run dev --workspace examples/babylon-underground` |
 
 Mars and Moon open in the browser and load their published R2 elevation and imagery without URL parameters. Use `?dataset=<folder of another revision>` to override the default. See the [Mars sample](examples/babylon-mars/README.md) and [Moon sample](examples/babylon-moon/README.md) for the dataset addresses and camera options. Google 3D Tiles requires its existing API key configuration.
 
