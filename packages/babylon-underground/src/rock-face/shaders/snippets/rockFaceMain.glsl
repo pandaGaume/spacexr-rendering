@@ -1,0 +1,14 @@
+// Tilts normalW by the relief and shades the albedo, whose variable the plugin names RF_ALBEDO, before the lights.
+#ifdef ROCKFACE
+{
+    float rfFoot=max(length(fwidth(vPositionW)),1e-4);
+    vec4 rf=rfRelief(vPositionW,rfFoot,rockFace.x);
+    normalW=normalize(normalW-rockFace.y*(rf.yzw-dot(rf.yzw,normalW)*normalW));
+    RF_ALBEDO*=mix(1.-rockFace.z,1.,clamp(.5+.5*rf.x/(.25*rockFace.x),0.,1.));
+    if(rockFace.w>0.){
+        float rfGrain=.6*smoothstep(2.*rfFoot,6.*rfFoot,2.2)*rfNoise(vPositionW/2.2+31.7).x
+                     +.4*smoothstep(2.*rfFoot,6.*rfFoot,.6)*rfNoise(vPositionW/.6-12.9).x;
+        RF_ALBEDO*=1.+rockFace.w*rfGrain;
+    }
+}
+#endif

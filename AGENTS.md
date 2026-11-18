@@ -2,6 +2,7 @@
 
 `packages/core` owns the existing `@spacexr/3d-tiles-babylon` adapter. Its package identity is unchanged.
 `packages/tools` owns the shader compiler and existing terrain and renderer comparisons.
+`packages/babylon-underground` owns the procedural rock material and the chamber lighting of underground views.
 `examples` contains the Google 3D Tiles and implicit terrain applications.
 The single runtime lives in `../3d-tiles-core`, tile addressing and tiling schemes in `../spacexr-tiling`; raster, DEM and grid live in `../terrain-core`.
 Do not copy those implementations here. Do not add empty future packages or change algorithms during recomposition.

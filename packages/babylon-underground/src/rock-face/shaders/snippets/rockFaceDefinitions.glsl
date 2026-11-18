@@ -1,0 +1,47 @@
+// Relief of a rock face per pixel: 3D value noise with its exact gradient, summed over octaves. ROCKFACE_OCTAVES is a
+// define of the plugin; rockFace is its uniform (largest wavelength in metres, strength, cavity, grain), declared by
+// the plugin in the uniform buffer of the material.
+#ifdef ROCKFACE
+#ifdef ROCKFACE_BAKED
+// The noise baked into a 3D texture that repeats, its value in x and its gradient in yzw: one read where the other
+// branch hashes the eight corners of a cell. rockFaceLattice is one over the cells of the texture, and half a texel.
+uniform highp sampler3D rockFaceNoise;
+vec4 rfNoise(vec3 x){return texture(rockFaceNoise,x*rockFaceLattice.x+rockFaceLattice.y);}
+#else
+uvec3 rfPcg(uvec3 v){
+    v=v*1664525u+1013904223u;
+    v.x+=v.y*v.z;v.y+=v.z*v.x;v.z+=v.x*v.y;
+    v^=v>>16u;
+    v.x+=v.y*v.z;v.y+=v.z*v.x;v.z+=v.x*v.y;
+    return v;
+}
+float rfHash(ivec3 p){return float(rfPcg(uvec3(p)).x)*(1.0/4294967295.0);}
+// Value noise in [-1, 1] in x, its gradient in yzw.
+vec4 rfNoise(vec3 x){
+    vec3 fl=floor(x);vec3 f=x-fl;ivec3 p=ivec3(fl);
+    vec3 u=f*f*f*(f*(f*6.-15.)+10.);vec3 du=30.*f*f*(f*(f-2.)+1.);
+    float a=rfHash(p),b=rfHash(p+ivec3(1,0,0)),c=rfHash(p+ivec3(0,1,0)),d=rfHash(p+ivec3(1,1,0));
+    float e=rfHash(p+ivec3(0,0,1)),g=rfHash(p+ivec3(1,0,1)),h=rfHash(p+ivec3(0,1,1)),k=rfHash(p+ivec3(1,1,1));
+    float k1=b-a,k2=c-a,k3=e-a,k4=a-b-c+d,k5=a-c-e+h,k6=a-b-e+g,k7=-a+b+c-d+e-g-h+k;
+    float v=a+k1*u.x+k2*u.y+k3*u.z+k4*u.x*u.y+k5*u.y*u.z+k6*u.z*u.x+k7*u.x*u.y*u.z;
+    vec3 gr=du*vec3(k1+k4*u.y+k6*u.z+k7*u.y*u.z,k2+k5*u.z+k4*u.x+k7*u.z*u.x,k3+k6*u.x+k5*u.y+k7*u.x*u.y);
+    return vec4(2.*v-1.,2.*gr);
+}
+#endif
+// Height in metres towards the void in x, its world gradient in yzw. Octaves under about two pixels fade out.
+vec4 rfRelief(vec3 p,float foot,float L0){
+    const mat3 R=mat3(.792,.539,-.268,-.441,.823,.370,.422,-.180,.890);
+    vec4 acc=vec4(0.);float L=L0,A=L0*.13;
+    for(int k=0;k<ROCKFACE_OCTAVES;k++){
+        float w=smoothstep(2.*foot,6.*foot,L);
+        if(w>0.){
+            vec4 n=rfNoise(R*(p/L)+vec3(float(k)*17.31,float(k)*-8.73,float(k)*5.19));
+            vec3 g=transpose(R)*n.yzw/L;
+            float s=sqrt(n.x*n.x+.01);
+            acc+=w*A*vec4(.45*n.x+.55*(1.-2.*(s-.1)),.45*g+.55*(-2.*n.x/s)*g);
+        }
+        L*=.5;A*=.55;
+    }
+    return acc;
+}
+#endif

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" href="data:," />
+        <title>SpaceXR underground rock</title>
+    </head>
+    <body>
+        <canvas id="render-canvas" aria-label="Test cavity"></canvas>
+        <aside id="panel">
+            <h1>Procedural rock</h1>
+            <div>
+                <button data-key="1">2 m</button><button data-key="2">20 m</button><button data-key="3">100 m</button>
+                <button data-key="a">A macro</button><button data-key="b">B meso</button><button data-key="c">C micro</button>
+                <button data-key="q">Quality</button><button data-key="s">Seed</button><button data-key="f">Normals</button>
+                <button data-key="h">Shadows</button><button data-key="r">Rock</button><button data-key="m">Measure</button>
+            </div>
+            <pre id="state"></pre>
+            <pre id="stats"></pre>
+            <output id="status">Building the cavity...</output>
+        </aside>
+        <script type="module" src="/src/main.ts"></script>
+    </body>
+</html>
