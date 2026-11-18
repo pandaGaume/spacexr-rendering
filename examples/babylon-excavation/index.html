@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Excavation</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #050506;
+        color: #ddd;
+        font:
+          13px system-ui,
+          sans-serif;
+      }
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        outline: none;
+        touch-action: none;
+      }
+      #status {
+        position: fixed;
+        left: 12px;
+        bottom: 12px;
+        max-width: 70ch;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.6);
+        pointer-events: none;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="status">Chargement de l'excavation…</div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

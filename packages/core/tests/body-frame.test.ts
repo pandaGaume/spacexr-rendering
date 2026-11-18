@@ -4,7 +4,8 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode.js";
 import { describe, expect, it } from "vitest";
 import { CubeTileSurface } from "@spacexr/tiles/cube";
 import { ReferenceSurface } from "@spacexr/tiles/surface";
-import { cubeTiling } from "@spacexr/terrain-tileset";
+import { createGridTopology } from "@spacexr/grid";
+import { TerrainPickPatch, cubeTiling } from "@spacexr/terrain-tileset";
 import { terrainBodyFrame } from "../src/terrain/gpu/body-frame";
 import { PickSurface } from "../src/terrain/gpu/pick-surface";
 import { instancedGridVertexShader } from "../src/terrain/gpu/shaders/instancedGrid.vertex";
@@ -44,14 +45,23 @@ describe("GPU terrain body frame", () => {
         const root = new TransformNode("body", scene);
         root.position.set(1000, 2000, 3000);
         root.metadata = { bodyId: "arbitrary-body", layerId: "terrain" };
-        const pick = new PickSurface(scene, undefined, 1, 4, cubeTiling(new CubeTileSurface(ReferenceSurface.sphere(1738100))), root);
+        const pick = new PickSurface(scene, root);
+        const tiling = cubeTiling(new CubeTileSurface(ReferenceSurface.sphere(1738100)));
+        const topology = createGridTopology(4);
+        const patches = [0, 1].map((x) => new TerrainPickPatch(tiling, topology, { face: 0, lod: 1, x, y: 0 }, () => 0));
         try {
-            pick.update([{ face: 0, lod: 0, x: 0, y: 0 }]);
+            pick.update(patches);
+            expect(scene.meshes).toHaveLength(1);
             const mesh = scene.meshes[0]!;
             expect(mesh.parent).toBe(root);
             expect(mesh.metadata).toEqual(root.metadata);
             expect(mesh.layerMask).toBe(0);
             expect(mesh.isPickable).toBe(true);
+            // One sub-mesh per tile keeps Babylon's bounding test per tile.
+            expect(mesh.subMeshes).toHaveLength(2);
+            expect(pick.size).toBe(2);
+            pick.update([]);
+            expect(scene.meshes).toHaveLength(0);
         } finally {
             pick.dispose();
             scene.dispose();

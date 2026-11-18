@@ -16,6 +16,7 @@
         "packages/babylon-moon",
         "packages/babylon-mars",
         "packages/babylon-gltf-ext",
+        "packages/babylon-underground",
         "examples/*"
     ],
     "overrides": {
@@ -50,7 +51,9 @@
         "example:moon": "npm run dev --workspace @spacexr/example-babylon-moon -- --open",
         "example:mars": "npm run dev --workspace @spacexr/example-babylon-mars -- --open",
         "example:vectors": "npm run dev --workspace @spacexr/example-babylon-vector-terrain",
-        "example:vectors:preview": "npm run preview --workspace @spacexr/example-babylon-vector-terrain"
+        "example:vectors:preview": "npm run preview --workspace @spacexr/example-babylon-vector-terrain",
+        "example:excavation": "npm run dev --prefix examples/babylon-excavation",
+        "example:excavation:headset": "npm run headset --prefix examples/babylon-excavation"
     },
     "dependencies": {
         "@spacexr/3d-tiles-core": "file:../3d-tiles-core/node/packages/core",
