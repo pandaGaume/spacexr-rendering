@@ -1,0 +1,34 @@
+{
+    "name": "@spacexr/example-babylon-excavation",
+    "version": "0.1.0",
+    "private": true,
+    "description": "An excavation of chambers small and monumental joined by tunnels, grown and turned into rock by @spacexr/ceiling, drawn with the rock face of @spacexr/babylon-underground, with a lit walkway on its floor.",
+    "type": "module",
+    "license": "Apache-2.0",
+    "engines": {
+        "node": ">=20.11.0"
+    },
+    "scripts": {
+        "excavation": "tsx scripts/build-excavation.ts",
+        "predev": "tsx scripts/build-excavation.ts --if-missing",
+        "dev": "vite",
+        "preheadset": "tsx scripts/build-excavation.ts --if-missing",
+        "headset": "vite --mode headset",
+        "build": "tsx scripts/build-excavation.ts --if-missing && vite build",
+        "preview": "vite preview",
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "lint": "eslint \"src/**/*.ts\" \"scripts/**/*.ts\" \"*.ts\"",
+        "format": "prettier --check \"src/**/*.ts\" \"scripts/**/*.ts\" \"*.{ts,json,md,html}\"",
+        "format:fix": "prettier --write \"src/**/*.ts\" \"scripts/**/*.ts\" \"*.{ts,json,md,html}\""
+    },
+    "dependencies": {
+        "@babylonjs/core": "^9.33.1",
+        "@spacexr/babylon-underground": "0.1.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.0",
+        "tsx": "^4.23.15",
+        "typescript": "^5.4.0",
+        "vite": "^6.4.5"
+    }
+}
