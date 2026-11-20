@@ -22,7 +22,7 @@
         "format:fix": "prettier --write \"src/**/*.ts\" \"scripts/**/*.ts\" \"*.{ts,json,md,html}\""
     },
     "dependencies": {
-        "@babylonjs/core": "^9.33.1",
+        "@babylonjs/core": "^9.36.0",
         "@spacexr/babylon-underground": "0.1.0"
     },
     "devDependencies": {
