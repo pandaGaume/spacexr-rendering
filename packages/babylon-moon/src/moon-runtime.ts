@@ -213,6 +213,8 @@ export async function createMoonRuntime(scene: Scene, options: IMoonRuntimeOptio
                 lighting,
                 junctions: "fine",
                 edgeHeights: "coarsest",
+                // One instance per presented tile and its junction topology; the shader computes the cube surface.
+                geometrySelection: "runtime",
                 tiling: cubeTiling(surface),
                 ...(elevation ? { elevation: { pyramid: elevation.pyramid, verticalScale } } : {}),
                 ...(imageryPages ? { imageryPages } : {}),

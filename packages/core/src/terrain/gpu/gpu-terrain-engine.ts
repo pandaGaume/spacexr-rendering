@@ -18,7 +18,7 @@ import type {
 } from "@spacexr/3d-tiles-runtime";
 import { completeTileCover, DrapeInstanceCut, type IDrapeInstance } from "@spacexr/raster";
 import { createGridTopology, type IGridTopology } from "@spacexr/grid";
-import { parentTileAddress, tileAddressKey as key } from "@spacexr/tiles";
+import { CUBE_FACE_FRAMES, parentTileAddress, tileAddressKey as key } from "@spacexr/tiles";
 
 import { TerrainPickPatch, pickTerrain, type ITerrainPickHit, type ITerrainRay, type ITerrainTiling } from "@spacexr/terrain-tileset";
 import type { IBabylonTileResourceStatistics } from "../../monitor/runtime-monitor";
@@ -98,9 +98,10 @@ interface IPlacedInstance {
 }
 
 /**
- * GPU terrain adapter. Runtime-selected Web Mercator draws one instance per presented terrain tile, grouped by
- * shared fine-side junction index topologies. It computes ellipsoid offsets analytically from compact parameters
- * and reads only heights from the DEM; imagery pages use fragment-level indirection without subdividing terrain.
+ * GPU terrain adapter. Runtime-selected tiles, Web Mercator or the cube with radial heights, draw one instance per
+ * presented terrain tile, grouped by shared fine-side junction index topologies. The shader computes the reference
+ * surface analytically from compact parameters of each instance and reads only heights from the DEM; imagery pages use
+ * fragment-level indirection without subdividing terrain.
  *
  * The alternate draped path, still combines the terrain and imagery cuts,
  * balances its instances, and reads their reference-surface shapes from texture arrays. Both paths use the same
@@ -127,6 +128,7 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
     private readonly imageryPages: BabylonRasterPages | undefined;
     private readonly cut: DrapeInstanceCut;
     private readonly runtimeSelection: boolean;
+    private readonly cubeSurface: boolean;
     private readonly ambientLighting: boolean;
     private readonly drape: GpuRasterDrape | undefined;
     private readonly normals: GpuTerrainNormals | undefined;
@@ -157,8 +159,8 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
         this.normals =
             this.runtimeSelection && inputs.normalPages && !this.ambientLighting ? new GpuTerrainNormals(inputs.normalPages) : undefined;
         this.normalObserver = this.normals?.pages.changed.add(() => (this.normalsDirty = true));
-        if (this.runtimeSelection && this.tiling.radialHeights)
-            throw new RangeError("Runtime-selected GPU geometry is currently supported for Web Mercator only.");
+        // Radial heights are those of the cube: on the runtime path its shader computes the equi-angular surface.
+        this.cubeSurface = this.runtimeSelection && this.tiling.radialHeights;
         this.drape =
             this.runtimeSelection && this.imageryPages
                 ? new GpuRasterDrape(this.scene, this.imageryPages, TERRAIN_CONFIG.imagery.maxDrapeDepth)
@@ -215,6 +217,7 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
                     "inverseRadiiSquared",
                     "semiMajorAxis",
                     "eccentricitySquared",
+                    "cubeFrames",
                 ],
                 samplers: ["shapes", "elevations", "imagery", "imageryTables", "normalTextures"],
                 defines: [
@@ -222,6 +225,7 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
                     ...(this.imageryPages ? ["#define IMAGERY"] : []),
                     ...(this.tiling.radialHeights ? ["#define RADIAL_HEIGHTS"] : []),
                     ...(this.runtimeSelection ? ["#define RUNTIME_SELECTION"] : []),
+                    ...(this.cubeSurface ? ["#define CUBE_SURFACE"] : []),
                     ...(this.ambientLighting ? ["#define AMBIENT_ONLY"] : []),
                     ...(this.normals ? ["#define PROVIDER_NORMALS"] : []),
                 ],
@@ -242,7 +246,12 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
             this.material.setFloat("semiMajorAxis", radii[0]);
             this.material.setFloat("eccentricitySquared", 1 - (radii[2] / radii[0]) ** 2);
         }
-        if (this.runtimeSelection && !radii) throw new RangeError("Runtime-selected Web Mercator requires the reference ellipsoid radii.");
+        if (this.runtimeSelection && !radii) throw new RangeError("Runtime-selected GPU geometry requires the reference surface radii.");
+        if (this.cubeSurface)
+            this.material.setArray4(
+                "cubeFrames",
+                CUBE_FACE_FRAMES.flatMap(({ center, u, v }) => [center.x, center.y, center.z, 0, u.x, u.y, u.z, 0, v.x, v.y, v.z, 0]),
+            );
         if (this.drape) this.material.setTexture("imageryTables", this.drape.tables);
         if (this.normals) {
             this.material.setTexture("normalTextures", this.normals.pages.pool);
@@ -521,8 +530,17 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
                 normalAreas?.set(this.normalArea(address), offset);
                 place[offset + 3] = this.shapes?.acquire(address) ?? 0;
                 const center = this.tiling.center(address);
-                if (this.tiling.radialHeights) rotation.set([center.x, center.y, center.z, instance.finerEdges], offset);
-                else {
+                if (this.tiling.radialHeights) {
+                    rotation.set([center.x, center.y, center.z, instance.finerEdges], offset);
+                    if (this.cubeSurface) {
+                        // Face angles of the tile centre, a quarter turn across a face, and the span of the tile.
+                        const count = 2 ** address.lod;
+                        const span = Math.PI / 2 / count;
+                        const tangentU = Math.tan(span * (address.x + 0.5) - Math.PI / 4);
+                        const tangentV = Math.tan(span * (address.y + 0.5) - Math.PI / 4);
+                        surface!.set([tangentU, tangentV, span, address.face ?? 0], offset);
+                    }
+                } else {
                     const longitude = this.tiling.rotation(address);
                     const span = (2 * Math.PI) / 2 ** address.lod;
                     rotation.set([Math.cos(longitude), Math.sin(longitude), span, instance.finerEdges], offset);
