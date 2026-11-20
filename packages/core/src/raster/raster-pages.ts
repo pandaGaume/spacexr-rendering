@@ -29,10 +29,13 @@ export interface IBabylonRasterPage {
  * registration declared by the source, so that neighbouring
  * pages hold the same texels on their shared edge. When a neighbour arrives later, the pages it completes are
  * written again. `changed` notifies every page that became resident, was rewritten or left.
+ *
+ * When the source changes, {@link invalidate} starts a new pyramid, which loads the rasters again, and marks pages
+ * stale. Loading a stale page reloads its raster and writes it into the same layer: the page keeps being displayed
+ * until its new texels replace the previous ones.
  */
 export class BabylonRasterPages {
     public readonly pool: TextureArrayPool;
-    public readonly pyramid: RasterPyramid<ColorRasterGrid>;
     /** Resident pages by tile, valued by layer. */
     public readonly resident = new ResidentTiles<number>();
     /** Imagery tiles the runtime presents: the imagery cut, which sets how deep terrain tiles are draped. */
@@ -41,6 +44,12 @@ export class BabylonRasterPages {
     public readonly changed = new Observable<ITileAddress>();
     private readonly pageSize: number;
     private readonly buffer: Uint8Array;
+    private readonly pyramidOptions: Omit<IRasterPyramidOptions<ColorRasterGrid>, "create" | "onStitched">;
+    private current: RasterPyramid<ColorRasterGrid>;
+    /** Resident pages written before an invalidation that covers them, until they are reloaded. */
+    private readonly stale = new ResidentTiles<true>();
+    /** Resident pages written from the current pyramid, which its stitching completes. */
+    private fresh = new ResidentTiles<true>();
 
     public constructor(scene: Scene, options: IBabylonRasterPagesOptions) {
         const { tileSize, initialLayers, ...pyramid } = options;
@@ -50,12 +59,8 @@ export class BabylonRasterPages {
             size: this.pageSize,
             ...(initialLayers === undefined ? {} : { initialLayers }),
         });
-        this.pyramid = new RasterPyramid<ColorRasterGrid>({
-            ...pyramid,
-            onStitched: (changed) => {
-                for (const address of changed) this.rewrite(address);
-            },
-        });
+        this.pyramidOptions = pyramid;
+        this.current = this.createPyramid();
     }
 
     /** Texels per page side. */
@@ -63,27 +68,66 @@ export class BabylonRasterPages {
         return this.pageSize;
     }
 
+    /** Raster pyramid of the current source; {@link invalidate} replaces it. */
+    public get pyramid(): RasterPyramid<ColorRasterGrid> {
+        return this.current;
+    }
+
     /**
-     * Loads the raster of a tile and makes its page resident.
+     * The source changed: rasters load again, from a new pyramid, and the resident pages the predicate selects, all
+     * by default, become stale. A stale page stays displayed; the next {@link load} of its tile reloads it in place.
+     * The other pages keep their texels. Retains taken on the previous pyramid are not carried over.
      *
-     * @returns The page, or `undefined` when the pyramid has no raster there or the texture array is full.
+     * @param affects - Whether the data of a tile changed, such as its extent crossing an edited area. Include the
+     *     tiles that only touch that area: their shared edge changes too.
+     * @returns The tiles of the pages that became stale.
+     */
+    public invalidate(affects?: (address: ITileAddress) => boolean): ITileAddress[] {
+        this.current = this.createPyramid();
+        this.fresh = new ResidentTiles<true>();
+        const invalidated: ITileAddress[] = [];
+        for (const address of [...this.resident.addresses()]) {
+            if (affects && !affects(address)) continue;
+            this.stale.set(address, true);
+            invalidated.push({ ...address });
+        }
+        return invalidated;
+    }
+
+    /** Whether the page of a tile is resident and waits for its reload. */
+    public isStale(address: ITileAddress): boolean {
+        return this.stale.has(address);
+    }
+
+    /**
+     * Loads the raster of a tile and makes its page resident. A stale page is reloaded into its layer.
+     *
+     * @returns The page, or `undefined` when the pyramid has no raster there or the texture array is full. A stale
+     *     page the pyramid no longer serves keeps its texels.
      */
     public async load(address: ITileAddress, signal?: AbortSignal): Promise<IBabylonRasterPage | undefined> {
-        signal?.throwIfAborted();
-        const existing = this.resident.get(address);
-        if (existing !== undefined) return { address, layer: existing };
-        if (address.lod > this.pyramid.maxLOD) return undefined;
-        const region = await this.pyramid.load(address, signal);
-        signal?.throwIfAborted();
-        if (!region) return undefined;
-        const again = this.resident.get(address);
-        if (again !== undefined) return { address, layer: again };
-        const layer = this.pool.reserve();
-        if (layer === undefined) return undefined;
-        this.resident.set(address, layer);
-        this.upload(layer, region.grid);
-        this.changed.notifyObservers(address);
-        return { address, layer };
+        for (;;) {
+            signal?.throwIfAborted();
+            const existing = this.resident.get(address);
+            if (existing !== undefined && !this.stale.has(address)) return { address, layer: existing };
+            const pyramid = this.current;
+            if (address.lod > pyramid.maxLOD) return existing === undefined ? undefined : { address, layer: existing };
+            const region = await pyramid.load(address, signal);
+            signal?.throwIfAborted();
+            // Invalidated while it loaded: this raster may predate the change.
+            if (pyramid !== this.current) continue;
+            const layer = this.resident.get(address);
+            if (layer !== undefined) {
+                if (this.stale.delete(address) && region) this.write(address, layer, region.grid);
+                return { address, layer };
+            }
+            if (!region) return undefined;
+            const reserved = this.pool.reserve();
+            if (reserved === undefined) return undefined;
+            this.resident.set(address, reserved);
+            this.write(address, reserved, region.grid);
+            return { address, layer: reserved };
+        }
     }
 
     /** Marks an imagery tile as part of the cut the runtime presents. */
@@ -104,6 +148,8 @@ export class BabylonRasterPages {
         this.presented.delete(address);
         if (layer === undefined) return;
         this.resident.delete(address);
+        this.stale.delete(address);
+        this.fresh.delete(address);
         this.pool.release(layer);
         this.changed.notifyObservers(address);
     }
@@ -113,11 +159,32 @@ export class BabylonRasterPages {
         this.pool.dispose();
     }
 
-    /** Writes the stitched raster of a resident page again, after a neighbour completed it. */
+    private createPyramid(): RasterPyramid<ColorRasterGrid> {
+        const pyramid: RasterPyramid<ColorRasterGrid> = new RasterPyramid<ColorRasterGrid>({
+            ...this.pyramidOptions,
+            onStitched: (changed) => {
+                // A replaced pyramid still finishing its loads no longer writes pages.
+                if (pyramid !== this.current) return;
+                for (const address of changed) this.rewrite(address);
+            },
+        });
+        return pyramid;
+    }
+
+    private write(address: ITileAddress, layer: number, grid: ColorRasterGrid): void {
+        this.upload(layer, grid);
+        this.fresh.set(address, true);
+        this.changed.notifyObservers(address);
+    }
+
+    /**
+     * Writes the stitched raster of a resident page again, after a neighbour completed it. Only pages written from
+     * the current pyramid: the others keep their complete texels until they are loaded again.
+     */
     private rewrite(address: ITileAddress): void {
         const layer = this.resident.get(address);
-        const grid = this.pyramid.stitchedGrid(address);
-        if (layer === undefined || !grid) return;
+        const grid = this.current.stitchedGrid(address);
+        if (layer === undefined || !grid || !this.fresh.has(address)) return;
         this.upload(layer, grid);
         this.changed.notifyObservers(address);
     }

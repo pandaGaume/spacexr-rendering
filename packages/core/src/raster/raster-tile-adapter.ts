@@ -19,6 +19,9 @@ export interface IBabylonRasterTileAdapterOptions<TSpatial> {
  * Pages stay resident while the runtime keeps their content, including hidden tiles, so that bindings can fall back
  * to coarser pages while finer ones load. The adapter draws nothing: draping engines bind the resident pages to the
  * tiles they render.
+ *
+ * To redrape after the source changed, call `BabylonRasterPages.invalidate`, then `TileRuntime.invalidate` over the
+ * same tiles: each refreshed tile reloads its page in place and keeps its handle, with no hole.
  */
 export class BabylonRasterTileAdapter<TSpatial>
     implements ITileActivationAdapter<TSpatial, IBabylonRasterPage, never>, ITilePresentationAdapter<TSpatial, IBabylonRasterPage, never>
@@ -40,9 +43,11 @@ export class BabylonRasterTileAdapter<TSpatial>
                     await context.readiness.failed(content.id, new Error("The raster pyramid has no page for this tile."));
                     continue;
                 }
+                // A reload after `BabylonRasterPages.invalidate` rewrote the page in place: its handle stays.
+                const refreshed = context.refresh && content.handle?.layer === page.layer ? content.handle : undefined;
                 const accepted = await context.readiness.ready(content.id, {
                     kind: "renderable",
-                    handle: page,
+                    handle: refreshed ?? page,
                     cacheKey: content.uri,
                     cost: {
                         cpuBytes: 0,
@@ -50,7 +55,7 @@ export class BabylonRasterTileAdapter<TSpatial>
                         networkBytes: 0,
                     },
                 });
-                if (!accepted) this.pages.release(page.address);
+                if (!accepted && !refreshed) this.pages.release(page.address);
             } catch (error) {
                 if (context.signal.aborted) await context.readiness.cancelled(content.id);
                 else await context.readiness.failed(content.id, error);

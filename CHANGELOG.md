@@ -6,6 +6,11 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Added
+
+- `IEarthRuntime.invalidateImagery(bounds?)` of `@spacexr/babylon-earth` reloads the imagery of the tiles touching an extent in degrees, or all of it, through the application's imagery loader, without a hole and without rebuilding the terrain. It relies on `TileRuntime.invalidate` of `@spacexr/3d-tiles-runtime`.
+- `BabylonRasterPages.invalidate(affects?)` starts a new raster pyramid and marks resident pages stale; `load` reloads a stale page into its layer, and `isStale` reports it. `pyramid` becomes a getter. `BabylonRasterTileAdapter` and `GpuTerrainEngine` answer a refresh activation by keeping their handle.
+
 ### Removed
 
 - The ocean of `@spacexr/babylon-earth`: the `ocean` option of `createEarthRuntime`, `IEarthOceanOptions`, its engine and shader, and the `@spacexr/ocean` dependency, which is not published. The experiment is kept apart, out of `main`.

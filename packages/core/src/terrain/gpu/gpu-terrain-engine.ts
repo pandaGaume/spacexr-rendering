@@ -277,6 +277,14 @@ export class GpuTerrainEngine implements ITerrainEngine<IGpuTerrainHandle> {
     }
 
     public async activate(context: Activation): Promise<void> {
+        if (context.refresh) {
+            // An invalidated tile keeps its geometry: its imagery pages reload in place, which the drape reads directly.
+            for (const content of context.pendingContents) {
+                if (content.handle) await context.readiness.ready(content.id, { kind: "renderable", handle: content.handle });
+                else await context.readiness.cancelled(content.id);
+            }
+            return;
+        }
         for (const content of context.pendingContents) {
             if (context.signal.aborted) {
                 await context.readiness.cancelled(content.id);

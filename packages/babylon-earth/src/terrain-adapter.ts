@@ -20,6 +20,7 @@ export class EarthTerrainAdapter {
     public async activate(context: Activation): Promise<void> {
         // Cached content already owns its imagery. An empty activation must not release that page.
         if (context.pendingContents.length === 0) return;
+        if (context.refresh) return this.refresh(context);
         if (!this.pages) return this.terrain.activate(context);
         const address = metadataTileAddress(context.tile);
         let page: IBabylonRasterPage | undefined;
@@ -49,6 +50,27 @@ export class EarthTerrainAdapter {
             }
         } finally {
             if (page && !retained) this.pages.release(page.address);
+        }
+    }
+    /**
+     * Reloads the imagery of invalidated tiles: their stale pages are rewritten in place, through the imagery loader
+     * of the application. The terrain handles stay, and stay presented while the pages reload.
+     */
+    private async refresh(context: Activation): Promise<void> {
+        for (const content of context.pendingContents) {
+            const handle = content.handle;
+            try {
+                if (handle === undefined) {
+                    await context.readiness.cancelled(content.id);
+                    continue;
+                }
+                const page = this.pagesByHandle.get(handle);
+                if (page) await this.pages!.load(page.address, context.signal);
+                await context.readiness.ready(content.id, { kind: "renderable", handle });
+            } catch (error) {
+                if (context.signal.aborted) await context.readiness.cancelled(content.id);
+                else await context.readiness.failed(content.id, error);
+            }
         }
     }
     public deactivate(context: ITileDeactivationContext<IEcefSpatialState, unknown, never>): void {

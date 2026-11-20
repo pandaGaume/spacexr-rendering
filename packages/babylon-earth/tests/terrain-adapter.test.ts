@@ -54,6 +54,16 @@ describe("shared terrain and imagery lifecycle", () => {
         expect(pages.release).not.toHaveBeenCalled();
         expect(pages.present).toHaveBeenCalledTimes(2);
     });
+    it("reloads the page of a refreshed tile in place, keeping its terrain handle", async () => {
+        const { adapter, pages, terrain, context } = fixture(true);
+        await adapter.activate(context);
+        const handle = (context.readiness.ready as ReturnType<typeof vi.fn>).mock.calls[0]![1].handle;
+        await adapter.activate({ ...context, refresh: true, pendingContents: [{ id: "content", handle }] } as unknown as typeof context);
+        expect(pages.load).toHaveBeenCalledTimes(2);
+        expect(terrain.activate).toHaveBeenCalledOnce();
+        expect(context.readiness.ready).toHaveBeenLastCalledWith("content", { kind: "renderable", handle });
+        expect(pages.release).not.toHaveBeenCalled();
+    });
     it("releases imagery when tile readiness rejects the terrain resource", async () => {
         const { adapter, pages, context } = fixture(false);
         await adapter.activate(context);

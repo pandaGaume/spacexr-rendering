@@ -17,8 +17,8 @@ import {
     type IGeospatialCameraOptions,
     type IGridElevationOptions,
 } from "@spacexr/3d-tiles-babylon";
-import { createGeodesicGridSource, webMercatorTiling, type IPreparedHeights } from "@spacexr/terrain-tileset";
-import { WebMercatorTileMetrics } from "@spacexr/tiles";
+import { createGeodesicGridSource, metadataTileAddress, webMercatorTiling, type IPreparedHeights } from "@spacexr/terrain-tileset";
+import { WebMercatorTileMetrics, type ITileAddress } from "@spacexr/tiles";
 import {
     DenseImplicitSubtreeLoader,
     EcefSpatialMetric,
@@ -29,6 +29,7 @@ import {
     type IRuntimeAdapter,
 } from "@spacexr/3d-tiles-runtime";
 import { EARTH, EARTH_SYSTEM, earthSunDirection } from "./earth-model";
+import { tileTouchesBounds, type IGeographicBounds } from "./imagery-bounds";
 import { createPolarCaps } from "./polar-caps";
 import { EarthTerrainAdapter } from "./terrain-adapter";
 
@@ -76,6 +77,13 @@ export interface IEarthRuntime {
     update(): Promise<void>;
     /** Call after the caller's scene.render(false): the terrain engine finishes its frame. */
     afterRender(): void;
+    /**
+     * The imagery source changed, such as a layer the imagery loader composes: reloads the imagery of the tiles
+     * touching `bounds`, in degrees, or of every tile without bounds. The loader is called again for those tiles; their
+     * current imagery stays displayed until the new one replaces it, with no hole and without rebuilding the terrain.
+     * Resolves once the reload is requested, not when it is displayed; the next updates swap the pages in.
+     */
+    invalidateImagery(bounds?: IGeographicBounds): Promise<void>;
     /** Moves the Sun to its direction at that date, unless the Sun has a fixed direction. */
     setDate(date: Date): Promise<void>;
     /** Disposes owned resources, preserving the borrowed scene, engine and existingCamera. */
@@ -245,6 +253,20 @@ export async function createEarthRuntime(scene: Scene, options: IEarthRuntimeOpt
             },
             afterRender() {
                 if (!disposed) terrain!.afterRender();
+            },
+            async invalidateImagery(bounds) {
+                if (disposed) throw new Error("Earth runtime is disposed.");
+                if (!pages) return;
+                const touches = (address: ITileAddress): boolean => !bounds || tileTouchesBounds(address, bounds);
+                pages.invalidate(touches);
+                await runtime!.invalidate((tile) => {
+                    try {
+                        return touches(metadataTileAddress(tile));
+                    } catch {
+                        // A tile without an address holds no imagery page.
+                        return false;
+                    }
+                });
             },
             async setDate(value) {
                 if (disposed) throw new Error("Earth runtime is disposed.");
