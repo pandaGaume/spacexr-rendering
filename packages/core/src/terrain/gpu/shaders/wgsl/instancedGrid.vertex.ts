@@ -39,10 +39,13 @@ varying vDrape: vec4f;
 #else
 varying vImagery: vec3f;
 #endif
-#ifndef AMBIENT_ONLY
-#ifdef RADIAL_HEIGHTS
+#if defined(CUBE_SURFACE) || (defined(RADIAL_HEIGHTS) && !defined(AMBIENT_ONLY))
 uniform inverseRadiiSquared: vec3f;
 #endif
+#ifdef CUBE_SURFACE
+uniform cubeFrames: array<vec4f, 18>;
+#endif
+#ifndef AMBIENT_ONLY
 #if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
 varying vTile: vec2f;
 varying vPage: vec4f;
@@ -116,6 +119,8 @@ let cosine = 1.0 + t * (-0.5 + t * (1.0 / 24.0 + t * (-1.0 / 720.0
 + t * (1.0 / 40320.0 + t * (-1.0 / 3628800.0 + t / 479001600.0)))));
 return vec2f(sine, cosine * cosineSign);
 }
+#endif
+#if defined(RUNTIME_SELECTION) && !defined(CUBE_SURFACE)
 fn mercatorSurface(uv: vec2f, surfaceInfo: ptr<function, vec4f>) -> vec3f {
 let surface = vertexInputs.instSurface;
 let dq = (0.5 - uv.y) * vertexInputs.instRotation.z;
@@ -148,6 +153,36 @@ let z = (1.0 - uniforms.eccentricitySquared) * (radiusDelta * sine + surface.w *
 return vec3f(x, y, z);
 }
 #endif
+#ifdef CUBE_SURFACE
+fn cubeSurface(uv: vec2f, up: ptr<function, vec3f>) -> vec3f {
+let surface = vertexInputs.instSurface;
+let face = i32(surface.w + 0.5);
+let centre = uniforms.cubeFrames[face * 3].xyz;
+let axisU = uniforms.cubeFrames[face * 3 + 1].xyz;
+let axisV = uniforms.cubeFrames[face * 3 + 2].xyz;
+let tangentU = surface.x;
+let tangentV = surface.y;
+let sineCosineU = mercatorSinCos((uv.x - 0.5) * surface.z);
+let sineCosineV = mercatorSinCos((uv.y - 0.5) * surface.z);
+let smallU = sineCosineU.x / sineCosineU.y;
+let smallV = sineCosineV.x / sineCosineV.y;
+let deltaU = smallU * (1.0 + tangentU * tangentU) / (1.0 - tangentU * smallU);
+let deltaV = smallV * (1.0 + tangentV * tangentV) / (1.0 - tangentV * smallV);
+let w0 = centre + axisU * tangentU + axisV * tangentV;
+let delta = axisU * deltaU + axisV * deltaV;
+let length0 = sqrt(1.0 + tangentU * tangentU + tangentV * tangentV);
+let e = (2.0 * (tangentU * deltaU + tangentV * deltaV) + deltaU * deltaU + deltaV * deltaV) / (length0 * length0);
+let q = sqrt(1.0 + e);
+let n0 = w0 / length0;
+let dn = (delta - w0 * (e / (1.0 + q))) / (length0 * q);
+*up = n0 + dn;
+let r0 = inverseSqrt(dot(n0 * n0, uniforms.inverseRadiiSquared));
+let x = dot(dn * (2.0 * n0 + dn), uniforms.inverseRadiiSquared) * r0 * r0;
+let root = sqrt(1.0 + x);
+let dr = -r0 * x / (root * (1.0 + root));
+return (r0 + dr) * dn + dr * n0;
+}
+#endif
 #ifndef RUNTIME_SELECTION
 fn sampledPosition(h: vec2i) -> vec3f {
 let uv = vec2f(h) / f32(steps());
@@ -176,10 +211,16 @@ return 0.5 * (sampledPosition(h - vec2i(0, 1)) + sampledPosition(h + vec2i(0, 1)
 }
 return sampledPosition(h);
 }
+#endif
 #ifndef AMBIENT_ONLY
 #ifdef RADIAL_HEIGHTS
 fn shapePosition(h: vec2i) -> vec3f {
+#ifdef CUBE_SURFACE
+var up: vec3f;
+return cubeSurface(vec2f(h) / f32(steps()), &up);
+#else
 return textureLoad(shapes, h, i32(vertexInputs.instPlace.w + 0.5), 0).xyz;
+#endif
 }
 fn surfaceTangent(before: vec2i, after: vec2i, normal: vec3f) -> vec3f {
 let last = steps();
@@ -188,7 +229,6 @@ let second = clamp(after, vec2i(0), vec2i(last));
 let chord = (shapePosition(second) - shapePosition(first)) * f32(last) / f32(second.x - first.x + second.y - first.y);
 return chord - normal * dot(chord, normal);
 }
-#endif
 #endif
 #endif
 fn rotate(p: vec3f) -> vec3f {
@@ -203,7 +243,11 @@ return vec3f(rotation.x * p.x - rotation.y * p.y, rotation.y * p.x + rotation.x 
 fn main(input: VertexInputs) -> FragmentInputs {
 let uv = vertexInputs.position.xy;
 let h = vec2i(floor(uv * f32(steps()) + 0.5));
-#ifdef RUNTIME_SELECTION
+#ifdef CUBE_SURFACE
+var up: vec3f;
+let surface = cubeSurface(uv, &up);
+let local = surface + up * heightIn(elevationAt(h), uv);
+#elif defined(RUNTIME_SELECTION)
 var surfaceInfo: vec4f;
 let surface = mercatorSurface(uv, &surfaceInfo);
 let longitude = (uv.x - 0.5) * vertexInputs.instRotation.z;

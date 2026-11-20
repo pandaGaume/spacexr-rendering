@@ -1,11 +1,12 @@
 /**
- * Runtime-selected Web Mercator draws the topology of its fine-side junctions; the alternate instanced path draws a grid
- * refined on its edges. Per-instance attributes place either topology:
+ * Runtime-selected tiles, Web Mercator or the cube, draw the topology of their fine-side junctions; the alternate
+ * instanced path draws a grid refined on its edges. Per-instance attributes place either topology:
  *
  * - instPlace: tile centre minus camera position, computed in double precision; w is a legacy shape layer.
  * - instRotation: cosine and sine of centre longitude, longitude span and legacy finer-edge bits; radial heights
  *   instead store the tile centre on the body and the finer-edge bits.
- * - instSurface: compact reference-ellipsoid parameters for analytic Mercator, centre ordinate, sin/cos latitude, N.
+ * - instSurface: compact reference-surface parameters. Analytic Mercator: centre ordinate, sin/cos latitude, N. Cube
+ *   (CUBE_SURFACE): tangents of the face angles of the tile centre, angular span of the tile on its face, face.
  * - instImagery: drape table depth/layer for runtime Mercator, or area and imagery layer for the legacy cut.
  * - instElevation and instEdge/Corner: area and page layer of the DEM serving that part of the tile. The fractional
  *   part of the layer stores quarter turns across configured local frames.
@@ -50,12 +51,18 @@ uniform float semiMajorAxis;
 uniform float eccentricitySquared;
 varying vec4 vDrape;
 #endif
+#if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
+// Inverse squared radii of the reference surface.
+uniform vec3 inverseRadiiSquared;
+#endif
+#ifdef CUBE_SURFACE
+// Centre, u and v axes of each face of the cube, three entries a face.
+uniform vec4 cubeFrames[18];
+#endif
 
 varying vec3 vImagery;
 #ifndef AMBIENT_ONLY
 #if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
-// Inverse squared radii of the reference surface.
-uniform vec3 inverseRadiiSquared;
 varying vec2 vTile;
 varying vec4 vPage;
 varying vec3 vUp;
@@ -138,7 +145,9 @@ vec2 mercatorSinCos(float angle) {
         + t * (1.0 / 40320.0 + t * (-1.0 / 3628800.0 + t / 479001600.0)))));
     return vec2(sine, cosine * cosineSign);
 }
+#endif
 
+#if defined(RUNTIME_SELECTION) && !defined(CUBE_SURFACE)
 // Differences around the centre of the tile, never a subtraction of two planet-sized positions. The sine and
 // cosine of the latitude difference follow the tangent subtraction identity for atan(sinh(q)), avoiding angles
 // and repeated hyperbolic evaluation. surfaceInfo holds sine latitude, cosine latitude, N and its denominator.
@@ -175,16 +184,49 @@ vec3 mercatorSurface(vec2 uv, out vec4 surfaceInfo) {
 }
 #endif
 
+#ifdef CUBE_SURFACE
+// Equi-angular cube: the direction of a point of a face is normalize(C + tan(a) U + tan(b) V), a and b its face angles.
+// Differences around the centre of the tile, as for Mercator: the tangent of a small angle comes from the polynomial
+// sine and cosine, the change of tangent from the addition identity, and the unit direction and the radius of the
+// reference surface change by differences of small quantities. No planet-sized value is ever subtracted. up receives
+// the unit direction of the point.
+vec3 cubeSurface(vec2 uv, out vec3 up) {
+    int face = int(instSurface.w + 0.5);
+    vec3 centre = cubeFrames[face * 3].xyz;
+    vec3 axisU = cubeFrames[face * 3 + 1].xyz;
+    vec3 axisV = cubeFrames[face * 3 + 2].xyz;
+    float tangentU = instSurface.x;
+    float tangentV = instSurface.y;
+    vec2 sineCosineU = mercatorSinCos((uv.x - 0.5) * instSurface.z);
+    vec2 sineCosineV = mercatorSinCos((uv.y - 0.5) * instSurface.z);
+    float smallU = sineCosineU.x / sineCosineU.y;
+    float smallV = sineCosineV.x / sineCosineV.y;
+    // tan(a0 + d) - tan(a0) = tan(d) (1 + tan(a0)^2) / (1 - tan(a0) tan(d)); the denominator stays above cos(pi/4).
+    float deltaU = smallU * (1.0 + tangentU * tangentU) / (1.0 - tangentU * smallU);
+    float deltaV = smallV * (1.0 + tangentV * tangentV) / (1.0 - tangentV * smallV);
+    vec3 w0 = centre + axisU * tangentU + axisV * tangentV;
+    vec3 delta = axisU * deltaU + axisV * deltaV;
+    float length0 = sqrt(1.0 + tangentU * tangentU + tangentV * tangentV);
+    // |w0 + delta|^2 = |w0|^2 (1 + e); the frame is orthonormal.
+    float e = (2.0 * (tangentU * deltaU + tangentV * deltaV) + deltaU * deltaU + deltaV * deltaV) / (length0 * length0);
+    float q = sqrt(1.0 + e);
+    vec3 n0 = w0 / length0;
+    vec3 dn = (delta - w0 * (e / (1.0 + q))) / (length0 * q);
+    up = n0 + dn;
+    // 1 / r^2 = n . D n on the reference surface: its change is dn . D (2 n0 + dn).
+    float r0 = inversesqrt(dot(n0 * n0, inverseRadiiSquared));
+    float x = dot(dn * (2.0 * n0 + dn), inverseRadiiSquared) * r0 * r0;
+    float root = sqrt(1.0 + x);
+    float dr = -r0 * x / (root * (1.0 + root));
+    return (r0 + dr) * dn + dr * n0;
+}
+#endif
+
+#ifndef RUNTIME_SELECTION
 // Displaced position of a lattice point, in the frame of the shape, where the tile centre longitude is 0.
 vec3 sampledPosition(ivec2 h) {
     vec2 uv = vec2(h) / float(steps());
-#ifdef RUNTIME_SELECTION
-    vec4 surfaceInfo;
-    vec3 offset = mercatorSurface(uv, surfaceInfo);
-    vec4 shape = vec4(offset, atan(surfaceInfo.x, surfaceInfo.y));
-#else
     vec4 shape = texelFetch(shapes, ivec3(h, int(instPlace.w + 0.5)), 0);
-#endif
 #ifdef RADIAL_HEIGHTS
     vec3 up = normalize(instRotation.xyz + shape.xyz);
 #else
@@ -204,23 +246,24 @@ bool finerAcross(int bit) {
 vec3 positionAt(ivec2 h) {
     int last = steps();
     h = clamp(h, ivec2(0), ivec2(last));
-#ifdef RUNTIME_SELECTION
-    // Fine-side Coarser index topologies remove the extra edge vertices. No vertex is snapped by this shader.
-    return sampledPosition(h);
-#else
     bool alongNorthSouth = (h.y == 0 && !finerAcross(1)) || (h.y == last && !finerAcross(4));
     bool alongEastWest = (h.x == last && !finerAcross(2)) || (h.x == 0 && !finerAcross(8));
     if (alongNorthSouth && (h.x & 1) == 1) return 0.5 * (sampledPosition(h - ivec2(1, 0)) + sampledPosition(h + ivec2(1, 0)));
     if (alongEastWest && (h.y & 1) == 1) return 0.5 * (sampledPosition(h - ivec2(0, 1)) + sampledPosition(h + ivec2(0, 1)));
     return sampledPosition(h);
-#endif
 }
+#endif
 
 #ifndef AMBIENT_ONLY
 #ifdef RADIAL_HEIGHTS
 // Position of a lattice point on the reference surface, relative to the tile centre.
 vec3 shapePosition(ivec2 h) {
+#ifdef CUBE_SURFACE
+    vec3 up;
+    return cubeSurface(vec2(h) / float(steps()), up);
+#else
     return texelFetch(shapes, ivec3(h, int(instPlace.w + 0.5)), 0).xyz;
+#endif
 }
 
 // Tangent of the reference surface per unit of tile coordinate, along the chord between two lattice points clamped to
@@ -247,7 +290,11 @@ vec3 rotate(vec3 p) {
 
 void main(void) {
     ivec2 h = ivec2(floor(position.xy * float(steps()) + 0.5));
-#ifdef RUNTIME_SELECTION
+#ifdef CUBE_SURFACE
+    vec3 up;
+    vec3 surface = cubeSurface(position.xy, up);
+    vec3 local = surface + up * heightIn(elevationAt(h), position.xy);
+#elif defined(RUNTIME_SELECTION)
     vec4 surfaceInfo;
     vec3 surface = mercatorSurface(position.xy, surfaceInfo);
     float longitude = (position.x - 0.5) * instRotation.z;

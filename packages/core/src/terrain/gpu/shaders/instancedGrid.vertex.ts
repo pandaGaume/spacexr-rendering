@@ -36,10 +36,15 @@ uniform float semiMajorAxis;
 uniform float eccentricitySquared;
 varying vec4 vDrape;
 #endif
+#if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
+uniform vec3 inverseRadiiSquared;
+#endif
+#ifdef CUBE_SURFACE
+uniform vec4 cubeFrames[18];
+#endif
 varying vec3 vImagery;
 #ifndef AMBIENT_ONLY
 #if defined(RADIAL_HEIGHTS) || defined(RUNTIME_SELECTION)
-uniform vec3 inverseRadiiSquared;
 varying vec2 vTile;
 varying vec4 vPage;
 varying vec3 vUp;
@@ -112,6 +117,8 @@ float cosine = 1.0 + t * (-0.5 + t * (1.0 / 24.0 + t * (-1.0 / 720.0
 + t * (1.0 / 40320.0 + t * (-1.0 / 3628800.0 + t / 479001600.0)))));
 return vec2(sine, cosine * cosineSign);
 }
+#endif
+#if defined(RUNTIME_SELECTION) && !defined(CUBE_SURFACE)
 vec3 mercatorSurface(vec2 uv, out vec4 surfaceInfo) {
 float dq = (0.5 - uv.y) * instRotation.z;
 float halfDq = 0.5 * dq;
@@ -143,15 +150,39 @@ surfaceInfo = vec4(sine, cosine, radius, denominator);
 return vec3(x, y, z);
 }
 #endif
+#ifdef CUBE_SURFACE
+vec3 cubeSurface(vec2 uv, out vec3 up) {
+int face = int(instSurface.w + 0.5);
+vec3 centre = cubeFrames[face * 3].xyz;
+vec3 axisU = cubeFrames[face * 3 + 1].xyz;
+vec3 axisV = cubeFrames[face * 3 + 2].xyz;
+float tangentU = instSurface.x;
+float tangentV = instSurface.y;
+vec2 sineCosineU = mercatorSinCos((uv.x - 0.5) * instSurface.z);
+vec2 sineCosineV = mercatorSinCos((uv.y - 0.5) * instSurface.z);
+float smallU = sineCosineU.x / sineCosineU.y;
+float smallV = sineCosineV.x / sineCosineV.y;
+float deltaU = smallU * (1.0 + tangentU * tangentU) / (1.0 - tangentU * smallU);
+float deltaV = smallV * (1.0 + tangentV * tangentV) / (1.0 - tangentV * smallV);
+vec3 w0 = centre + axisU * tangentU + axisV * tangentV;
+vec3 delta = axisU * deltaU + axisV * deltaV;
+float length0 = sqrt(1.0 + tangentU * tangentU + tangentV * tangentV);
+float e = (2.0 * (tangentU * deltaU + tangentV * deltaV) + deltaU * deltaU + deltaV * deltaV) / (length0 * length0);
+float q = sqrt(1.0 + e);
+vec3 n0 = w0 / length0;
+vec3 dn = (delta - w0 * (e / (1.0 + q))) / (length0 * q);
+up = n0 + dn;
+float r0 = inversesqrt(dot(n0 * n0, inverseRadiiSquared));
+float x = dot(dn * (2.0 * n0 + dn), inverseRadiiSquared) * r0 * r0;
+float root = sqrt(1.0 + x);
+float dr = -r0 * x / (root * (1.0 + root));
+return (r0 + dr) * dn + dr * n0;
+}
+#endif
+#ifndef RUNTIME_SELECTION
 vec3 sampledPosition(ivec2 h) {
 vec2 uv = vec2(h) / float(steps());
-#ifdef RUNTIME_SELECTION
-vec4 surfaceInfo;
-vec3 offset = mercatorSurface(uv, surfaceInfo);
-vec4 shape = vec4(offset, atan(surfaceInfo.x, surfaceInfo.y));
-#else
 vec4 shape = texelFetch(shapes, ivec3(h, int(instPlace.w + 0.5)), 0);
-#endif
 #ifdef RADIAL_HEIGHTS
 vec3 up = normalize(instRotation.xyz + shape.xyz);
 #else
@@ -166,20 +197,22 @@ return (int(instRotation.w + 0.5) & bit) != 0;
 vec3 positionAt(ivec2 h) {
 int last = steps();
 h = clamp(h, ivec2(0), ivec2(last));
-#ifdef RUNTIME_SELECTION
-return sampledPosition(h);
-#else
 bool alongNorthSouth = (h.y == 0 && !finerAcross(1)) || (h.y == last && !finerAcross(4));
 bool alongEastWest = (h.x == last && !finerAcross(2)) || (h.x == 0 && !finerAcross(8));
 if (alongNorthSouth && (h.x & 1) == 1) return 0.5 * (sampledPosition(h - ivec2(1, 0)) + sampledPosition(h + ivec2(1, 0)));
 if (alongEastWest && (h.y & 1) == 1) return 0.5 * (sampledPosition(h - ivec2(0, 1)) + sampledPosition(h + ivec2(0, 1)));
 return sampledPosition(h);
-#endif
 }
+#endif
 #ifndef AMBIENT_ONLY
 #ifdef RADIAL_HEIGHTS
 vec3 shapePosition(ivec2 h) {
+#ifdef CUBE_SURFACE
+vec3 up;
+return cubeSurface(vec2(h) / float(steps()), up);
+#else
 return texelFetch(shapes, ivec3(h, int(instPlace.w + 0.5)), 0).xyz;
+#endif
 }
 vec3 surfaceTangent(ivec2 before, ivec2 after, vec3 normal) {
 int last = steps();
@@ -199,7 +232,11 @@ return vec3(instRotation.x * p.x - instRotation.y * p.y, instRotation.y * p.x + 
 }
 void main(void) {
 ivec2 h = ivec2(floor(position.xy * float(steps()) + 0.5));
-#ifdef RUNTIME_SELECTION
+#ifdef CUBE_SURFACE
+vec3 up;
+vec3 surface = cubeSurface(position.xy, up);
+vec3 local = surface + up * heightIn(elevationAt(h), position.xy);
+#elif defined(RUNTIME_SELECTION)
 vec4 surfaceInfo;
 vec3 surface = mercatorSurface(position.xy, surfaceInfo);
 float longitude = (position.x - 0.5) * instRotation.z;
