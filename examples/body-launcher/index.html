@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Banc des corps</title>
+        <style>
+            :root {
+                color-scheme: dark;
+                --bg: #0b1220;
+                --panel: #131c2e;
+                --line: #24324d;
+                --ink: #e6edf5;
+                --quiet: #93a4bd;
+                --accent: #6cb8ff;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                height: 100vh;
+                display: grid;
+                grid-template-columns: 300px 1fr;
+                background: var(--bg);
+                color: var(--ink);
+                font: 14px system-ui, sans-serif;
+            }
+            aside {
+                padding: 14px;
+                overflow-y: auto;
+                background: var(--panel);
+                border-right: 1px solid var(--line);
+            }
+            h1 {
+                margin: 0 0 12px;
+                font-size: 16px;
+            }
+            h2 {
+                margin: 18px 0 8px;
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                color: var(--quiet);
+            }
+            .bodies,
+            .presets {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            button {
+                padding: 7px 10px;
+                border: 1px solid var(--line);
+                border-radius: 6px;
+                background: #1b2740;
+                color: var(--ink);
+                font: inherit;
+                cursor: pointer;
+            }
+            button:hover {
+                border-color: var(--accent);
+            }
+            button.on {
+                background: var(--accent);
+                border-color: var(--accent);
+                color: #08111f;
+                font-weight: 600;
+            }
+            label {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                margin: 6px 0;
+            }
+            label.check {
+                justify-content: flex-start;
+            }
+            input[type="number"],
+            select {
+                width: 120px;
+                padding: 4px 6px;
+                border: 1px solid var(--line);
+                border-radius: 4px;
+                background: var(--bg);
+                color: var(--ink);
+                font: inherit;
+            }
+            .row {
+                display: flex;
+                gap: 6px;
+                margin-top: 12px;
+            }
+            .row button {
+                flex: 1;
+            }
+            #url {
+                margin-top: 10px;
+                font: 11px ui-monospace, monospace;
+                color: var(--quiet);
+                word-break: break-all;
+            }
+            #status {
+                margin-top: 8px;
+                font-size: 12px;
+                color: var(--quiet);
+            }
+            .down {
+                color: #ff8a80;
+            }
+            iframe {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                background: #000;
+            }
+        </style>
+    </head>
+    <body>
+        <aside>
+            <h1>Banc des corps</h1>
+            <div class="bodies" id="bodies"></div>
+            <h2>Voler vers</h2>
+            <div class="presets" id="presets"></div>
+            <h2>Options</h2>
+            <div id="options"></div>
+            <div class="row">
+                <button id="reload">Recharger</button>
+                <button id="open">Ouvrir à part</button>
+            </div>
+            <div id="status"></div>
+            <div id="url"></div>
+        </aside>
+        <iframe id="view" title="Vue" allow="fullscreen; xr-spatial-tracking"></iframe>
+        <script type="module">
+            // Each body is an example of spacexr-rendering, started on its own port; the page only builds its URL.
+            const LOCAL_TILES = "http://127.0.0.1:8794";
+            const BODIES = {
+                moon: {
+                    name: "Lune",
+                    base: "http://localhost:5176/",
+                    // The local tile service serves the latest revision, the Tranquillitatis pit included; without it, the
+                    // example reads its published R2 revision.
+                    sources: { local: `${LOCAL_TILES}/moon`, published: "" },
+                    imagery: { on: "dataset", off: "none" },
+                    wireframe: true,
+                    presets: [
+                        { name: "Fosse de Tranquillitatis", query: { lat: 8.3355, lon: 33.222, radius: 600, pitch: 55, yaw: 0 } },
+                        { name: "Fosse, au bord", query: { lat: 8.3355, lon: 33.222, radius: 220, pitch: 40, yaw: 0 } },
+                        // From the floor of the crater, a grazing camera would pass under its rim: these look down from above it.
+                        { name: "Shackleton", query: { lat: -89.67, lon: 129.2, radius: 14000, pitch: 45, yaw: 0 } },
+                        { name: "Shackleton, large", query: { lat: -89.67, lon: 129.2, radius: 35000, pitch: 50, yaw: 0 } },
+                        { name: "Lune entière", query: { lat: 10, lon: 30, radius: 4000000, pitch: 0, yaw: 0 } },
+                    ],
+                },
+                mars: {
+                    name: "Mars",
+                    base: "http://localhost:5177/",
+                    // The local tile service does not serve Mars on the cube: the example reads its published R2 revision.
+                    sources: undefined,
+                    imagery: { on: "dataset", off: "none" },
+                    wireframe: true,
+                    presets: [
+                        { name: "Jezero", query: { lat: 18.4, lon: 77.6, radius: 90000, pitch: 60, yaw: 0 } },
+                        { name: "Delta de Jezero", query: { lat: 18.51, lon: 77.4, radius: 9000, pitch: 65, yaw: 0 } },
+                        { name: "Utopia, Zhurong", query: { lat: 25.07, lon: 109.93, radius: 20000, pitch: 60, yaw: 0 } },
+                        { name: "Mars entière", query: { lat: 18, lon: 77, radius: 8000000, pitch: 0, yaw: 0 } },
+                    ],
+                },
+                earth: {
+                    name: "Terre",
+                    base: "http://localhost:5180/",
+                    sources: undefined,
+                    imagery: { on: "google", off: "none" },
+                    wireframe: false,
+                    presets: [
+                        { name: "Mont-Blanc", query: { view: "terrain", lat: 45.8326, lon: 6.8652, height: 4808, radius: 35000, pitch: 60 } },
+                        { name: "Horizon", query: { view: "horizon" } },
+                        { name: "Orbite", query: {} },
+                    ],
+                },
+            };
+
+            const state = { body: "moon", preset: 0, source: "local", imagery: true, wireframe: false, sse: "", renderer: "webgl", scale: 1, hud: true };
+            try {
+                Object.assign(state, JSON.parse(localStorage.getItem("body-launcher") ?? "{}"));
+            } catch {
+                // A private window may refuse the storage: the defaults stay.
+            }
+            if (!BODIES[state.body]) state.body = "moon";
+
+            const view = document.getElementById("view");
+            const save = () => {
+                try {
+                    localStorage.setItem("body-launcher", JSON.stringify(state));
+                } catch {
+                    // Nothing to keep.
+                }
+            };
+
+            function url() {
+                const body = BODIES[state.body];
+                const preset = body.presets[state.preset] ?? body.presets[0];
+                const query = new URLSearchParams();
+                if (body.sources && body.sources[state.source]) query.set("dataset", body.sources[state.source]);
+                for (const [key, value] of Object.entries(preset.query)) query.set(key, String(value));
+                query.set("imagery", state.imagery ? body.imagery.on : body.imagery.off);
+                if (body.wireframe && state.wireframe) query.set("solid", "0");
+                if (state.sse !== "" && Number(state.sse) > 0) query.set("sse", String(state.sse));
+                // The Earth example defaults to WebGPU, the others to WebGL: the choice is always written.
+                query.set("renderer", state.renderer);
+                if (Number(state.scale) !== 1) query.set("scale", String(state.scale));
+                if (!state.hud) query.set("hud", "0");
+                return `${body.base}?${query}`;
+            }
+
+            function fly() {
+                const target = url();
+                document.getElementById("url").textContent = target;
+                view.src = target;
+                save();
+                probe();
+            }
+
+            // A server that does not answer rejects the request; an answering one resolves, even opaque.
+            async function probe() {
+                const body = BODIES[state.body];
+                const checks = [[body.name, body.base]];
+                if (body.sources && state.source === "local") checks.push(["Service de tuiles", `${LOCAL_TILES}/`]);
+                const lines = await Promise.all(
+                    checks.map(async ([name, address]) => {
+                        try {
+                            await fetch(address, { mode: "no-cors", cache: "no-store" });
+                            return `${name} : en ligne`;
+                        } catch {
+                            return `<span class="down">${name} : hors ligne (${new URL(address).port})</span>`;
+                        }
+                    }),
+                );
+                document.getElementById("status").innerHTML = lines.join("<br>");
+            }
+
+            function render() {
+                const body = BODIES[state.body];
+                const bodies = document.getElementById("bodies");
+                bodies.replaceChildren(
+                    ...Object.entries(BODIES).map(([key, value]) => {
+                        const button = document.createElement("button");
+                        button.textContent = value.name;
+                        button.className = key === state.body ? "on" : "";
+                        button.onclick = () => {
+                            state.body = key;
+                            state.preset = 0;
+                            render();
+                            fly();
+                        };
+                        return button;
+                    }),
+                );
+                const presets = document.getElementById("presets");
+                presets.replaceChildren(
+                    ...body.presets.map((preset, index) => {
+                        const button = document.createElement("button");
+                        button.textContent = preset.name;
+                        button.className = index === state.preset ? "on" : "";
+                        button.onclick = () => {
+                            state.preset = index;
+                            render();
+                            fly();
+                        };
+                        return button;
+                    }),
+                );
+                const options = document.getElementById("options");
+                const rows = [];
+                if (body.sources)
+                    rows.push(
+                        `<label>Données <select id="source"><option value="local">Service local (8794)</option><option value="published">Révision publiée (R2)</option></select></label>`,
+                    );
+                rows.push(`<label class="check"><input type="checkbox" id="imagery"> Imagerie</label>`);
+                if (body.wireframe) rows.push(`<label class="check"><input type="checkbox" id="wireframe"> Filaire</label>`);
+                rows.push(`<label class="check"><input type="checkbox" id="hud"> Indicateurs</label>`);
+                rows.push(`<label>Rendu <select id="renderer"><option value="webgl">WebGL</option><option value="webgpu">WebGPU</option></select></label>`);
+                rows.push(`<label>SSE <input type="number" id="sse" min="0.5" step="0.5" placeholder="défaut"></label>`);
+                rows.push(`<label>Échelle verticale <input type="number" id="scale" min="0.1" step="0.5"></label>`);
+                options.innerHTML = rows.join("");
+                const bind = (id, key, read) => {
+                    const input = document.getElementById(id);
+                    if (!input) return;
+                    if (input.type === "checkbox") input.checked = Boolean(state[key]);
+                    else input.value = state[key];
+                    input.onchange = () => {
+                        state[key] = read(input);
+                        fly();
+                    };
+                };
+                bind("source", "source", (input) => input.value);
+                bind("imagery", "imagery", (input) => input.checked);
+                bind("wireframe", "wireframe", (input) => input.checked);
+                bind("hud", "hud", (input) => input.checked);
+                bind("renderer", "renderer", (input) => input.value);
+                bind("sse", "sse", (input) => input.value);
+                bind("scale", "scale", (input) => Number(input.value) || 1);
+            }
+
+            document.getElementById("reload").onclick = () => {
+                // A new address forces a full reload, even of a page that ignores its own reload.
+                view.src = "about:blank";
+                requestAnimationFrame(() => (view.src = url()));
+            };
+            document.getElementById("open").onclick = () => window.open(url(), "_blank");
+            render();
+            fly();
+        </script>
+    </body>
+</html>
