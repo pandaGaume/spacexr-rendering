@@ -112,6 +112,71 @@ describe("provider normal data preparation", () => {
         expect([...state.resident.addresses()].map(tileAddressKey).sort()).toEqual([b, c].map(tileAddressKey).sort());
         normals.dispose();
     });
+
+    it("retries a failing source less and less often, reports it once, and starts over once it loaded", async () => {
+        let now = 0;
+        const clock = vi.spyOn(performance, "now").mockImplementation(() => now);
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        let failing = true;
+        const resident = new ResidentTiles<number>();
+        const load = vi.fn(async (address: ITileAddress) => {
+            if (failing) throw new Error("bad tile");
+            resident.set(address, resident.get(address) ?? 0);
+            return { address, layer: 0 };
+        });
+        const pages = {
+            resident,
+            pyramid: { areaOf: (address: ITileAddress) => ({ ancestor: address }), retain: vi.fn(), release: vi.fn() },
+            release: vi.fn((address: ITileAddress) => resident.delete(address)),
+            load,
+        } as unknown as BabylonRasterPages;
+        const normals = new GpuTerrainNormals(pages, 1, 1);
+        const a = { lod: 15, x: 1, y: 1 },
+            b = { lod: 15, x: 2, y: 1 };
+        const at = async (time: number): Promise<void> => {
+            now = time;
+            normals.update();
+            for (let i = 0; i < 10; i++) await Promise.resolve();
+        };
+        try {
+            normals.sync([a]);
+            await at(0);
+            expect(load).toHaveBeenCalledTimes(1);
+            // 5 s, then 10 s, then 20 s after each failure.
+            for (const [before, next, calls] of [
+                [4999, 5000, 2],
+                [14999, 15000, 3],
+                [34999, 35000, 4],
+            ] as const) {
+                await at(before);
+                expect(load).toHaveBeenCalledTimes(calls - 1);
+                await at(next);
+                expect(load).toHaveBeenCalledTimes(calls);
+            }
+            expect(warn).toHaveBeenCalledTimes(1);
+            // It loads after 40 s: the failures are forgotten.
+            failing = false;
+            await at(75000);
+            expect(load).toHaveBeenCalledTimes(5);
+            expect(normals.layer(a)).toBe(0);
+            // Evicted by another source, then failing again: back to 5 s, and reported again.
+            normals.sync([b]);
+            await at(75000);
+            failing = true;
+            normals.sync([a]);
+            await at(75000);
+            expect(warn).toHaveBeenCalledTimes(2);
+            const calls = load.mock.calls.length;
+            await at(79999);
+            expect(load).toHaveBeenCalledTimes(calls);
+            await at(80000);
+            expect(load).toHaveBeenCalledTimes(calls + 1);
+        } finally {
+            normals.dispose();
+            clock.mockRestore();
+            warn.mockRestore();
+        }
+    });
 });
 
 describe("provider normal shader path", () => {

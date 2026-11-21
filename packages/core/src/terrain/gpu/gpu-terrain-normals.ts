@@ -2,6 +2,11 @@ import { tileAddressKey as key, type ITileAddress } from "@spacexr/tiles";
 
 import type { BabylonRasterPages } from "../../raster/raster-pages";
 
+/** Delay before a failed source is asked for again, doubled at each failure in a row. */
+const FIRST_RETRY_MILLISECONDS = 5000;
+/** Longest delay between two attempts at a source that keeps failing. */
+const LAST_RETRY_MILLISECONDS = 300000;
+
 /** Normal sources follow only the displayed terrain cut and never participate in geometry selection or readiness. */
 export class GpuTerrainNormals {
     private readonly queued = new Map<string, ITileAddress>();
@@ -9,6 +14,8 @@ export class GpuTerrainNormals {
     private readonly cached = new Map<string, ITileAddress>();
     private readonly wanted = new Map<string, ITileAddress>();
     private readonly retryAfter = new Map<string, number>();
+    /** Failures in a row of each source, until it loads. */
+    private readonly failures = new Map<string, number>();
     private disposed = false;
     private nextRetry = Number.POSITIVE_INFINITY;
 
@@ -52,7 +59,10 @@ export class GpuTerrainNormals {
         this.pump();
     }
 
-    /** Retries transient source failures on a timer, independently of camera rotation. */
+    /**
+     * Retries source failures on a timer, independently of camera rotation: 5 s after the first failure, twice as long
+     * after each following one, up to 5 minutes. A failure that does not pass costs fewer and fewer requests.
+     */
     public update(): void {
         if (performance.now() < this.nextRetry) return;
         this.nextRetry = Number.POSITIVE_INFINITY;
@@ -79,6 +89,7 @@ export class GpuTerrainNormals {
         this.cached.clear();
         this.wanted.clear();
         this.retryAfter.clear();
+        this.failures.clear();
     }
 
     private pump(): void {
@@ -103,14 +114,15 @@ export class GpuTerrainNormals {
                 .then((page) => {
                     if (this.disposed || controller.signal.aborted || !this.wanted.has(id) || !page) {
                         if (page) this.pages.release(address);
-                        if (!page && !this.disposed && this.wanted.has(id) && !controller.signal.aborted) this.retry(id);
+                        if (!page && !this.disposed && this.wanted.has(id) && !controller.signal.aborted) this.retry(id, "no page");
                         return;
                     }
                     this.cached.set(id, address);
+                    this.failures.delete(id);
                     retained = true;
                 })
-                .catch(() => {
-                    if (!controller.signal.aborted) this.retry(id);
+                .catch((error: unknown) => {
+                    if (!controller.signal.aborted) this.retry(id, error);
                 })
                 .finally(() => {
                     if (!retained) this.pages.pyramid.release(address);
@@ -121,8 +133,12 @@ export class GpuTerrainNormals {
         }
     }
 
-    private retry(id: string): void {
-        const until = performance.now() + 5000;
+    /** Schedules the next attempt at a failed source; its first failure in a row is reported, the next ones are not. */
+    private retry(id: string, reason: unknown): void {
+        const failures = this.failures.get(id) ?? 0;
+        if (failures === 0) console.warn(`The normal tile ${id} failed to load; it is retried later, less and less often.`, reason);
+        this.failures.set(id, failures + 1);
+        const until = performance.now() + Math.min(FIRST_RETRY_MILLISECONDS * 2 ** failures, LAST_RETRY_MILLISECONDS);
         this.retryAfter.set(id, until);
         this.nextRetry = Math.min(this.nextRetry, until);
     }
