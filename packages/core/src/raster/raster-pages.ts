@@ -30,9 +30,9 @@ export interface IBabylonRasterPage {
  * pages hold the same texels on their shared edge. When a neighbour arrives later, the pages it completes are
  * written again. `changed` notifies every page that became resident, was rewritten or left.
  *
- * When the source changes, {@link invalidate} starts a new pyramid, which loads the rasters again, and marks pages
- * stale. Loading a stale page reloads its raster and writes it into the same layer: the page keeps being displayed
- * until its new texels replace the previous ones.
+ * When the source changes, {@link invalidate} forgets the rasters of the area it touches, which load again, and
+ * marks their pages stale; the rest of the pyramid stays. Loading a stale page reloads its raster and writes it into
+ * the same layer: the page keeps being displayed until its new texels replace the previous ones.
  */
 export class BabylonRasterPages {
     public readonly pool: TextureArrayPool;
@@ -45,11 +45,17 @@ export class BabylonRasterPages {
     private readonly pageSize: number;
     private readonly buffer: Uint8Array;
     private readonly pyramidOptions: Omit<IRasterPyramidOptions<ColorRasterGrid>, "create" | "onStitched">;
-    private current: RasterPyramid<ColorRasterGrid>;
+    private readonly current: RasterPyramid<ColorRasterGrid>;
     /** Resident pages written before an invalidation that covers them, until they are reloaded. */
     private readonly stale = new ResidentTiles<true>();
-    /** Resident pages written from the current pyramid, which its stitching completes. */
-    private fresh = new ResidentTiles<true>();
+    /** Resident pages written since the last change of their area, which the stitching of the pyramid completes. */
+    private readonly fresh = new ResidentTiles<true>();
+    /** How many times the source changed. */
+    private generation = 0;
+    /** The changes a load under way may predate: their generation and the tiles they touch, every tile without one. */
+    private changes: { generation: number; affects?: (address: ITileAddress) => boolean }[] = [];
+    /** The generation each load under way started at. */
+    private readonly loading = new Set<{ generation: number }>();
 
     public constructor(scene: Scene, options: IBabylonRasterPagesOptions) {
         const { tileSize, initialLayers, ...pyramid } = options;
@@ -68,7 +74,7 @@ export class BabylonRasterPages {
         return this.pageSize;
     }
 
-    /** Raster pyramid of the current source; {@link invalidate} replaces it. */
+    /** Raster pyramid of the source; {@link invalidate} forgets the rasters of the area that changed. */
     public get pyramid(): RasterPyramid<ColorRasterGrid> {
         return this.current;
     }
@@ -83,12 +89,15 @@ export class BabylonRasterPages {
      * @returns The tiles of the pages that became stale.
      */
     public invalidate(affects?: (address: ITileAddress) => boolean): ITileAddress[] {
-        this.current = this.createPyramid();
-        this.fresh = new ResidentTiles<true>();
+        this.current.invalidate(affects ?? (() => true));
+        this.generation++;
+        this.changes.push({ generation: this.generation, ...(affects ? { affects } : {}) });
+        this.forgetChanges();
         const invalidated: ITileAddress[] = [];
         for (const address of [...this.resident.addresses()]) {
             if (affects && !affects(address)) continue;
             this.stale.set(address, true);
+            this.fresh.delete(address);
             invalidated.push({ ...address });
         }
         return invalidated;
@@ -112,10 +121,19 @@ export class BabylonRasterPages {
             if (existing !== undefined && !this.stale.has(address)) return { address, layer: existing };
             const pyramid = this.current;
             if (address.lod > pyramid.maxLOD) return existing === undefined ? undefined : { address, layer: existing };
-            const region = await pyramid.load(address, signal);
+            const started = { generation: this.generation };
+            this.loading.add(started);
+            let region: Awaited<ReturnType<typeof pyramid.load>>;
+            try {
+                region = await pyramid.load(address, signal);
+            } finally {
+                this.loading.delete(started);
+            }
+            const predates = this.changedSince(address, started.generation);
+            this.forgetChanges();
             signal?.throwIfAborted();
-            // Invalidated while it loaded: this raster may predate the change.
-            if (pyramid !== this.current) continue;
+            // Its area changed while it loaded: this raster may predate the change.
+            if (predates) continue;
             const layer = this.resident.get(address);
             if (layer !== undefined) {
                 if (this.stale.delete(address) && region) this.write(address, layer, region.grid);
@@ -160,15 +178,24 @@ export class BabylonRasterPages {
     }
 
     private createPyramid(): RasterPyramid<ColorRasterGrid> {
-        const pyramid: RasterPyramid<ColorRasterGrid> = new RasterPyramid<ColorRasterGrid>({
+        return new RasterPyramid<ColorRasterGrid>({
             ...this.pyramidOptions,
             onStitched: (changed) => {
-                // A replaced pyramid still finishing its loads no longer writes pages.
-                if (pyramid !== this.current) return;
                 for (const address of changed) this.rewrite(address);
             },
         });
-        return pyramid;
+    }
+
+    /** Whether a change since `generation` touches a tile. */
+    private changedSince(address: ITileAddress, generation: number): boolean {
+        return this.changes.some((change) => change.generation > generation && (!change.affects || change.affects(address)));
+    }
+
+    /** Forgets the changes no load under way predates. */
+    private forgetChanges(): void {
+        let oldest = this.generation;
+        for (const started of this.loading) oldest = Math.min(oldest, started.generation);
+        this.changes = this.changes.filter((change) => change.generation > oldest);
     }
 
     private write(address: ITileAddress, layer: number, grid: ColorRasterGrid): void {
@@ -178,8 +205,8 @@ export class BabylonRasterPages {
     }
 
     /**
-     * Writes the stitched raster of a resident page again, after a neighbour completed it. Only pages written from
-     * the current pyramid: the others keep their complete texels until they are loaded again.
+     * Writes the stitched raster of a resident page again, after a neighbour completed it. Only pages written since the
+     * last change of their area: the others keep their complete texels until they are loaded again.
      */
     private rewrite(address: ITileAddress): void {
         const layer = this.resident.get(address);

@@ -74,6 +74,16 @@ describe("imagery page invalidation", () => {
         expect(loadsOf(load, OTHER)).toBe(1);
     });
 
+    it("keeps the rasters outside the area that changed: a page loaded again there reads none", async () => {
+        const { pages, load } = fixture();
+        await pages.load(OTHER);
+        // The page leaves the texture array; its raster stays in the pyramid.
+        pages.release(OTHER);
+        pages.invalidate((address) => address.x === 0 && address.y === 0);
+        await pages.load(OTHER);
+        expect(loadsOf(load, OTHER)).toBe(1);
+    });
+
     it("loads again a raster that was loading when the source changed", async () => {
         const { pages, load, state, writes } = fixture();
         let open!: () => void;
