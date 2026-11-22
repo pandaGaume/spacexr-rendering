@@ -2,14 +2,36 @@ import { describe, it, expect, vi } from "vitest";
 import type { GpuTerrainEngine, BabylonRasterPages, IGpuTerrainHandle } from "@spacexr/3d-tiles-babylon";
 import { EarthTerrainAdapter } from "../src/terrain-adapter";
 
-function fixture(accepted: boolean) {
+/** Deepest level the imagery of the fixtures serves. */
+const IMAGERY_MAX_LOD = 2;
+
+/** Terrain handle the fake engine builds for each tile. */
+const handles = new Map<unknown, IGpuTerrainHandle>();
+
+function context(handle: IGpuTerrainHandle, accepted: boolean, address = { lod: 1, x: 0, y: 0 }) {
+    const tile = { id: "tile", source: { metadata: { properties: address } } };
+    handles.set(tile, handle);
+    return {
+        signal: new AbortController().signal,
+        pendingContents: [{ id: "content" }],
+        tile,
+        readiness: { ready: vi.fn(async () => accepted), failed: vi.fn(), cancelled: vi.fn() },
+        resources: [{ handle }],
+    } as unknown as Parameters<EarthTerrainAdapter["activate"]>[0] & Parameters<EarthTerrainAdapter["present"]>[0];
+}
+
+function fixture(accepted: boolean, address = { lod: 1, x: 0, y: 0 }) {
     const handle = {} as IGpuTerrainHandle;
-    const address = { lod: 1, x: 0, y: 0 };
-    const page = { address, layer: 0 };
-    const pages = { load: vi.fn(async () => page), release: vi.fn(), present: vi.fn(), hide: vi.fn() };
+    const pages = {
+        load: vi.fn(async (page: { lod: number; x: number; y: number }) => ({ address: page, layer: 0 })),
+        release: vi.fn(),
+        present: vi.fn(),
+        hide: vi.fn(),
+        pyramid: { maxLOD: IMAGERY_MAX_LOD },
+    };
     const terrain = {
-        activate: vi.fn(async (context: Parameters<EarthTerrainAdapter["activate"]>[0]) => {
-            await context.readiness.ready("content", { kind: "renderable", handle });
+        activate: vi.fn(async (activation: Parameters<EarthTerrainAdapter["activate"]>[0]) => {
+            await activation.readiness.ready("content", { kind: "renderable", handle: handles.get(activation.tile)! });
         }),
         deactivate: vi.fn(),
         present: vi.fn(),
@@ -17,14 +39,7 @@ function fixture(accepted: boolean) {
         release: vi.fn(),
     };
     const adapter = new EarthTerrainAdapter(terrain as unknown as GpuTerrainEngine, pages as unknown as BabylonRasterPages);
-    const context = {
-        signal: new AbortController().signal,
-        pendingContents: [{ id: "content" }],
-        tile: { id: "tile", source: { metadata: { properties: { lod: 1, x: 0, y: 0 } } } },
-        readiness: { ready: vi.fn(async () => accepted), failed: vi.fn(), cancelled: vi.fn() },
-        resources: [{ handle }],
-    } as unknown as Parameters<EarthTerrainAdapter["activate"]>[0] & Parameters<EarthTerrainAdapter["present"]>[0];
-    return { adapter, pages, terrain, context };
+    return { adapter, pages, terrain, context: context(handle, accepted, address) };
 }
 describe("shared terrain and imagery lifecycle", () => {
     it("keeps accepted imagery until the single runtime releases its terrain handle", async () => {
@@ -75,5 +90,42 @@ describe("shared terrain and imagery lifecycle", () => {
         await adapter.activate(context);
         expect(context.readiness.failed).toHaveBeenCalled();
         expect(terrain.activate).not.toHaveBeenCalled();
+    });
+});
+
+describe("terrain deeper than its imagery", () => {
+    it("drapes a terrain tile below the deepest imagery level with the page of its ancestor at that level", async () => {
+        const { adapter, pages, context } = fixture(true, { lod: IMAGERY_MAX_LOD + 2, x: 13, y: 6 });
+        await adapter.activate(context);
+        expect(pages.load).toHaveBeenCalledWith({ lod: IMAGERY_MAX_LOD, x: 3, y: 1 }, context.signal);
+        expect(context.readiness.failed).not.toHaveBeenCalled();
+        expect(context.readiness.ready).toHaveBeenCalledOnce();
+    });
+    it("keeps a page shared by two terrain tiles resident and presented until the last one lets it go", async () => {
+        const { adapter, pages, context: parent } = fixture(true, { lod: IMAGERY_MAX_LOD, x: 1, y: 1 });
+        const child = context({} as IGpuTerrainHandle, true, { lod: IMAGERY_MAX_LOD + 1, x: 2, y: 3 });
+        await adapter.activate(parent);
+        await adapter.activate(child);
+        expect(pages.load).toHaveBeenNthCalledWith(2, { lod: IMAGERY_MAX_LOD, x: 1, y: 1 }, child.signal);
+        adapter.present(parent);
+        adapter.present(child);
+        expect(pages.present).toHaveBeenCalledOnce();
+        adapter.hide(parent);
+        adapter.release(parent);
+        expect(pages.hide).not.toHaveBeenCalled();
+        expect(pages.release).not.toHaveBeenCalled();
+        adapter.hide(child);
+        expect(pages.hide).toHaveBeenCalledOnce();
+        adapter.release(child);
+        expect(pages.release).toHaveBeenCalledOnce();
+    });
+    it("keeps the page another terrain tile holds when an activation on it is rejected", async () => {
+        const { adapter, pages, context: parent } = fixture(true, { lod: IMAGERY_MAX_LOD, x: 0, y: 0 });
+        const rejected = context({} as IGpuTerrainHandle, false, { lod: IMAGERY_MAX_LOD + 1, x: 1, y: 0 });
+        await adapter.activate(parent);
+        await adapter.activate(rejected);
+        expect(pages.release).not.toHaveBeenCalled();
+        adapter.release(parent);
+        expect(pages.release).toHaveBeenCalledOnce();
     });
 });
