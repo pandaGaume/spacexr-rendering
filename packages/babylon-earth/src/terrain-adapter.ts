@@ -1,7 +1,7 @@
 import type { ITerrainEngine } from "@spacexr/3d-tiles-babylon";
 import type { BabylonRasterPages, IBabylonRasterPage } from "@spacexr/3d-tiles-babylon";
 import { metadataTileAddress } from "@spacexr/terrain-tileset";
-import { ResidentTiles, ancestorTileAddress, type ITileAddress } from "@spacexr/tiles";
+import { ResidentTiles, tileAddressKey, type ITileAddress } from "@spacexr/tiles";
 import type {
     IEcefSpatialState,
     ITileActivationContext,
@@ -14,8 +14,10 @@ type Presentation = ITilePresentationContext<IEcefSpatialState, unknown, never>;
 /**
  * Couples imagery residency to the terrain cut. Selection remains exclusively in TileRuntime.
  *
- * A terrain tile deeper than the imagery is draped with the page of its ancestor at the deepest imagery level, as the
- * drape reads the nearest resident page that covers it. One page then serves several terrain handles: it stays
+ * A terrain tile deeper than the imagery serves at its place is draped with the page of its ancestor at that level, as
+ * the drape reads the nearest resident page that covers it. The level may vary from place to place (the serving level
+ * of the pyramid, such as layers deeper than the imagery under them): a refresh moves a tile to the page its place
+ * serves now. One page then serves several terrain handles: it stays
  * resident while one of them holds it, and presented while one of them is presented.
  */
 export class EarthTerrainAdapter {
@@ -80,7 +82,11 @@ export class EarthTerrainAdapter {
                     continue;
                 }
                 const page = this.pagesByHandle.get(handle);
-                if (page) await this.pages!.load(page.address, context.signal);
+                if (page) {
+                    const address = this.imageryAddress(metadataTileAddress(context.tile));
+                    if (tileAddressKey(address) === tileAddressKey(page.address)) await this.pages!.load(page.address, context.signal);
+                    else await this.repage(handle, page, address, context.signal);
+                }
                 await context.readiness.ready(content.id, { kind: "renderable", handle });
             } catch (error) {
                 if (context.signal.aborted) await context.readiness.cancelled(content.id);
@@ -92,15 +98,7 @@ export class EarthTerrainAdapter {
         this.terrain.deactivate(context);
     }
     public present(context: Presentation): void {
-        for (const resource of context.resources) {
-            const page = this.pagesByHandle.get(resource.handle);
-            if (page && !this.presented.has(resource.handle)) {
-                this.presented.add(resource.handle);
-                const count = (this.presenters.get(page.address) ?? 0) + 1;
-                this.presenters.set(page.address, count);
-                if (count === 1) this.pages!.present(page.address);
-            }
-        }
+        for (const resource of context.resources) this.presentHandle(resource.handle);
         this.terrain.present(context);
     }
     public hide(context: Presentation): void {
@@ -118,10 +116,35 @@ export class EarthTerrainAdapter {
             }
         }
     }
-    /** The imagery tile of a terrain tile: the tile itself, or its ancestor at the deepest level the imagery serves. */
+    /** The imagery tile of a terrain tile: the tile itself, or its ancestor at the deepest level its place serves. */
     private imageryAddress(address: ITileAddress): ITileAddress {
-        const deepest = this.pages!.pyramid.maxLOD;
-        return address.lod > deepest ? ancestorTileAddress(address, address.lod - deepest) : address;
+        return this.pages!.pyramid.areaOf(address).ancestor;
+    }
+    /**
+     * Moves a terrain handle to the page its place serves now: the new page is loaded and held first, so the tile is
+     * never without imagery; the old one is let go after. A place that serves no page there keeps the old one.
+     */
+    private async repage(handle: unknown, page: IBabylonRasterPage, address: ITileAddress, signal: AbortSignal): Promise<void> {
+        const next = await this.pages!.load(address, signal);
+        if (!next) {
+            await this.pages!.load(page.address, signal);
+            return;
+        }
+        this.hold(next.address);
+        const shown = this.presented.has(handle);
+        if (shown) this.unpresent(handle);
+        this.pagesByHandle.set(handle, next);
+        if (shown) this.presentHandle(handle);
+        this.unhold(page.address);
+    }
+    /** Adds a terrain handle to the presenters of its page; the first one presents the page. */
+    private presentHandle(handle: unknown): void {
+        const page = this.pagesByHandle.get(handle);
+        if (!page || this.presented.has(handle)) return;
+        this.presented.add(handle);
+        const count = (this.presenters.get(page.address) ?? 0) + 1;
+        this.presenters.set(page.address, count);
+        if (count === 1) this.pages!.present(page.address);
     }
     private hold(address: ITileAddress): void {
         this.holders.set(address, (this.holders.get(address) ?? 0) + 1);

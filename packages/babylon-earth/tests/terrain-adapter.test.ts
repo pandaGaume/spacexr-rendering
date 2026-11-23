@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { GpuTerrainEngine, BabylonRasterPages, IGpuTerrainHandle } from "@spacexr/3d-tiles-babylon";
+import { ancestorTileAddress, type ITileAddress } from "@spacexr/tiles";
 import { EarthTerrainAdapter } from "../src/terrain-adapter";
 
 /** Deepest level the imagery of the fixtures serves. */
@@ -27,7 +28,15 @@ function fixture(accepted: boolean, address = { lod: 1, x: 0, y: 0 }) {
         release: vi.fn(),
         present: vi.fn(),
         hide: vi.fn(),
-        pyramid: { maxLOD: IMAGERY_MAX_LOD },
+        /** The level each place serves: the deepest of the imagery by default, deeper where a layer is. */
+        serving: (_address: ITileAddress) => IMAGERY_MAX_LOD,
+        pyramid: {
+            maxLOD: IMAGERY_MAX_LOD,
+            areaOf: (address: ITileAddress) => {
+                const level = Math.min(address.lod, pages.serving(address));
+                return { ancestor: address.lod > level ? ancestorTileAddress(address, address.lod - level) : address };
+            },
+        },
     };
     const terrain = {
         activate: vi.fn(async (activation: Parameters<EarthTerrainAdapter["activate"]>[0]) => {
@@ -42,6 +51,23 @@ function fixture(accepted: boolean, address = { lod: 1, x: 0, y: 0 }) {
     return { adapter, pages, terrain, context: context(handle, accepted, address) };
 }
 describe("shared terrain and imagery lifecycle", () => {
+    it("moves a refreshed tile to the page its place serves now, the new page held before the old one goes", async () => {
+        const deep = { lod: 4, x: 3, y: 2 };
+        const { adapter, pages, context } = fixture(true, deep);
+        await adapter.activate(context);
+        adapter.present(context);
+        expect(pages.load).toHaveBeenLastCalledWith({ lod: 2, x: 0, y: 0 }, expect.anything());
+        // A layer deeper than the imagery comes over the place: it now serves the tile itself.
+        pages.serving = () => 4;
+        const handle = (context.readiness.ready as ReturnType<typeof vi.fn>).mock.calls[0]![1].handle;
+        await adapter.activate({ ...context, refresh: true, pendingContents: [{ id: "content", handle }] } as unknown as typeof context);
+        expect(pages.load).toHaveBeenLastCalledWith(deep, expect.anything());
+        expect(pages.present).toHaveBeenLastCalledWith(deep);
+        expect(pages.hide).toHaveBeenCalledWith({ lod: 2, x: 0, y: 0 });
+        expect(pages.release).toHaveBeenCalledWith({ lod: 2, x: 0, y: 0 });
+        adapter.release(context);
+        expect(pages.release).toHaveBeenLastCalledWith(deep);
+    });
     it("keeps accepted imagery until the single runtime releases its terrain handle", async () => {
         const { adapter, pages, terrain, context } = fixture(true);
         await adapter.activate(context);
