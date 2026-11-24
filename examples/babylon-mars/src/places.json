@@ -1,0 +1,74 @@
+[
+    {
+        "id": "jezero",
+        "name": "Jezero crater",
+        "description": "Perseverance, 1 m HiRISE DTM",
+        "latitude": 18.488057,
+        "longitude": 77.403449,
+        "radius": 20000,
+        "pitch": 65
+    },
+    {
+        "id": "utopia",
+        "name": "Utopia Planitia",
+        "description": "Zhurong, 3.5 m HiRIC DEM",
+        "latitude": 24.746853,
+        "longitude": 110.318004,
+        "radius": 20000,
+        "pitch": 65
+    },
+    {
+        "id": "gale",
+        "name": "Gale crater",
+        "description": "Curiosity and Mount Sharp",
+        "latitude": -4.5895,
+        "longitude": 137.4417,
+        "radius": 80000,
+        "pitch": 55
+    },
+    {
+        "id": "elysium",
+        "name": "Elysium Planitia",
+        "description": "InSight lander",
+        "latitude": 4.502,
+        "longitude": 135.623,
+        "radius": 20000,
+        "pitch": 60
+    },
+    {
+        "id": "olympus-mons",
+        "name": "Olympus Mons",
+        "description": "Largest volcano of the Solar System",
+        "latitude": 18.65,
+        "longitude": -133.8,
+        "radius": 900000,
+        "pitch": 35
+    },
+    {
+        "id": "valles-marineris",
+        "name": "Valles Marineris",
+        "description": "Canyon system",
+        "latitude": -13.9,
+        "longitude": -59.2,
+        "radius": 1500000,
+        "pitch": 35
+    },
+    {
+        "id": "hellas",
+        "name": "Hellas Planitia",
+        "description": "Impact basin",
+        "latitude": -42.4,
+        "longitude": 70.5,
+        "radius": 1800000,
+        "pitch": 20
+    },
+    {
+        "id": "planum-boreum",
+        "name": "Planum Boreum",
+        "description": "North polar cap",
+        "latitude": 88,
+        "longitude": 15,
+        "radius": 1500000,
+        "pitch": 20
+    }
+]

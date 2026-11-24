@@ -1,5 +1,7 @@
 import "../../babylon-implicit-grid-mapzen/src/style.css";
 
+import type { DirectionalLight } from "@babylonjs/core/Lights/directionalLight.js";
+import type { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight.js";
 import {
     BabylonRuntimeMonitor,
     TERRAIN_CONFIG,
@@ -14,7 +16,13 @@ import { WorkerDemDecoder, type IDemWorkerEndpoint } from "@spacexr/dem";
 import { debugImageryTile } from "../../babylon-implicit-grid-mapzen/src/debug-imagery";
 import { clearMonitorPanel, renderMonitorPanel } from "../../babylon-implicit-grid-mapzen/src/monitor-panel";
 import { ViewHud } from "../../shared/view-hud/view-hud";
+import { CameraFlight } from "../../shared/panels/camera-flight";
+import { PlacesPanel, findPlace, makeFoldable, type IPlace } from "../../shared/panels/panels";
 import DemDecoderWorker from "./dem-decoder.worker?worker";
+import placeList from "./places.json";
+
+/** Points of interest of the places panel, also named by the `place` URL parameter. */
+const PLACES: readonly IPlace[] = placeList;
 
 const DEFAULT_DATASET = "https://pub-d96348c50a354038a1df6f85e91e45c9.r2.dev/cube/mars/datasets/mars/global-0baf76880ef90d80ea3c/";
 
@@ -44,6 +52,18 @@ async function run(): Promise<void> {
         frame: requiredElement("frame-statistics", HTMLSpanElement),
     };
     const parameters = new URLSearchParams(window.location.search);
+    // `place` names a point of interest of places.json; `lat`, `lon`, `radius`, `pitch` and `yaw` override its view.
+    const place = findPlace(PLACES, parameters);
+    // Panels fold to their header; each remembers its state in this browser. The places stay reachable if loading fails.
+    const runtimePanel = requiredElement("runtime-panel", HTMLElement);
+    const runtimeTitle = runtimePanel.querySelector("strong");
+    makeFoldable(runtimePanel, { key: "mars-runtime", ...(runtimeTitle ? { header: runtimeTitle } : {}) });
+    // `flySpeed` multiplies the speed of the flights to the places, also set in their panel.
+    const places = new PlacesPanel(document.body, PLACES, {
+        key: "mars-places",
+        current: place?.id,
+        speed: Number(parameters.get("flySpeed") ?? "1"),
+    });
     // Override the published R2 revision with ?dataset=<folder>.
     const service = parameters.get("dataset") || DEFAULT_DATASET;
     // `renderer=webgpu` runs the WGSL shaders on the WebGPU engine of Babylon where the browser supports it.
@@ -92,11 +112,11 @@ async function run(): Promise<void> {
         body,
         labelLayer: requiredElement("tile-labels", HTMLDivElement),
         camera: {
-            latitude: Number(parameters.get("lat") ?? "18.4"),
-            longitude: Number(parameters.get("lon") ?? "77.6"),
-            radius: Number(parameters.get("radius") ?? "90000"),
-            pitchRadians: (Number(parameters.get("pitch") ?? "60") * Math.PI) / 180,
-            headingRadians: (Number(parameters.get("yaw") ?? "0") * Math.PI) / 180,
+            latitude: Number(parameters.get("lat") ?? place?.latitude ?? "18.4"),
+            longitude: Number(parameters.get("lon") ?? place?.longitude ?? "77.6"),
+            radius: Number(parameters.get("radius") ?? place?.radius ?? "90000"),
+            pitchRadians: (Number(parameters.get("pitch") ?? place?.pitch ?? "60") * Math.PI) / 180,
+            headingRadians: (Number(parameters.get("yaw") ?? place?.yaw ?? "0") * Math.PI) / 180,
             attachControl: true,
         },
         terrain: { cells, screenSpaceError, wireframe: !solid, lighting },
@@ -129,6 +149,15 @@ async function run(): Promise<void> {
         renderer === "webgpu" ? "WebGPU, WGSL" : "WebGL, GLSL"
     }`;
 
+    // A place chosen in the panel is reached by a flight: up to orbit, along the great circle, down to its view.
+    const flight = new CameraFlight(scene, mars.camera, {
+        lights: {
+            sun: (scene.getLightByName("mars-sun") as DirectionalLight | null) ?? undefined,
+            sky: (scene.getLightByName("mars-sky") as HemisphericLight | null) ?? undefined,
+        },
+    });
+    places.onSelect = (target, speed) => void flight.flyTo(target, speed);
+
     // Objects of the example, for the probes of the terrain bench and the browser console.
     (window as unknown as Record<string, unknown>).__SPACEXR_EXAMPLE__ = {
         renderer,
@@ -143,6 +172,7 @@ async function run(): Promise<void> {
 
     // Scale and altitude of the view. `hud=0` hides them.
     const hud = parameters.get("hud") === "0" ? undefined : new ViewHud(document.body);
+    if (hud) makeFoldable(hud.element, { key: "mars-view", title: "View" });
     if (hud) {
         const vertical = radialVerticalFrame(body.surface.reference);
         scene.onAfterRenderObservable.add(() => {
@@ -173,6 +203,7 @@ async function run(): Promise<void> {
         "beforeunload",
         () => {
             window.removeEventListener("resize", resize);
+            flight.dispose();
             hud?.dispose();
             monitor.dispose();
             void mars.dispose();

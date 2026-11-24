@@ -1,0 +1,83 @@
+[
+    {
+        "id": "shackleton",
+        "name": "Shackleton crater",
+        "description": "South pole, 5 m polar DEM",
+        "latitude": -89.67,
+        "longitude": 129.2,
+        "radius": 30000,
+        "pitch": 55
+    },
+    {
+        "id": "chandrayaan-3",
+        "name": "Chandrayaan-3",
+        "description": "South polar highlands, 2023",
+        "latitude": -69.3733,
+        "longitude": 32.3191,
+        "radius": 20000,
+        "pitch": 60
+    },
+    {
+        "id": "apollo-11",
+        "name": "Apollo 11",
+        "description": "Tranquility Base, 1969",
+        "latitude": 0.67408,
+        "longitude": 23.47297,
+        "radius": 15000,
+        "pitch": 60
+    },
+    {
+        "id": "tranquillitatis-pit",
+        "name": "Mare Tranquillitatis pit",
+        "description": "Skylight into a lava tube, excavated in the local revision",
+        "latitude": 8.3355,
+        "longitude": 33.222,
+        "radius": 600,
+        "pitch": 55
+    },
+    {
+        "id": "apollo-15",
+        "name": "Apollo 15",
+        "description": "Hadley Rille, 1971",
+        "latitude": 26.13222,
+        "longitude": 3.63386,
+        "radius": 25000,
+        "pitch": 65
+    },
+    {
+        "id": "apollo-17",
+        "name": "Apollo 17",
+        "description": "Taurus-Littrow valley, 1972",
+        "latitude": 20.1908,
+        "longitude": 30.77168,
+        "radius": 25000,
+        "pitch": 65
+    },
+    {
+        "id": "copernicus",
+        "name": "Copernicus",
+        "description": "93 km impact crater",
+        "latitude": 9.62,
+        "longitude": -20.08,
+        "radius": 180000,
+        "pitch": 45
+    },
+    {
+        "id": "tycho",
+        "name": "Tycho",
+        "description": "85 km rayed crater",
+        "latitude": -43.31,
+        "longitude": -11.36,
+        "radius": 180000,
+        "pitch": 45
+    },
+    {
+        "id": "change-4",
+        "name": "Chang'e 4",
+        "description": "Von Kármán crater, far side, 2019",
+        "latitude": -45.4446,
+        "longitude": 177.5991,
+        "radius": 40000,
+        "pitch": 60
+    }
+]

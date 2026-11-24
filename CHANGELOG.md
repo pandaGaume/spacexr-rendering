@@ -8,6 +8,7 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ### Added
 
+- The Moon and Mars examples list points of interest in a panel, from `src/places.json`, and accept `?place=<id>`; choosing one flies the camera up to orbit, along the great circle and down to the view of the place, at a speed set in the panel or by `?flySpeed=`, with the sun following the orbited point. The Moon lists the Mare Tranquillitatis pit, excavated in the local tile service revision only. Their statistics, places and view panels fold to their header, and the browser remembers each state. The shared code is in `examples/shared/panels`.
 - `IEarthRuntime.invalidateImagery(bounds?)` of `@spacexr/babylon-earth` reloads the imagery of the tiles touching an extent in degrees, or all of it, through the application's imagery loader, without a hole and without rebuilding the terrain. It relies on `TileRuntime.invalidate` of `@spacexr/3d-tiles-runtime`.
 - `BabylonRasterPages.invalidate(affects?)` starts a new raster pyramid and marks resident pages stale; `load` reloads a stale page into its layer, and `isStale` reports it. `pyramid` becomes a getter. `BabylonRasterTileAdapter` and `GpuTerrainEngine` answer a refresh activation by keeping their handle.
 

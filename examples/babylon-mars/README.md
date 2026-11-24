@@ -17,6 +17,12 @@ npm run example:mars
 
 The command opens [http://localhost:5177/](http://localhost:5177/). It uses `@spacexr/babylon-mars` and loads the published R2 revision without URL parameters. The default camera targets Jezero crater. Drag to pan, right-drag to turn and tilt, and use the wheel to zoom.
 
+## Points of interest and panels
+
+The panel at the top right lists the points of interest of [places.json](src/places.json), with their view: distance, pitch and heading. Choosing one flies the camera there: it climbs until the start and the place are both in view, travels along the great circle, then descends to the view of the place. The `Flight speed` slider of the panel, or `flySpeed`, multiplies the speed; at x1 a quarter of the body takes about 4 seconds, plus the zooms. A pointer, wheel or key input stops the flight. The sun follows the orbited point during the flight, from the north-west at 45 degrees as at the start. The address of the page records the place, so a reload starts there. The places are approximate published planetocentric coordinates, east-positive. They are not qualified against the dataset footprints; outside the HD coverages the relief is the global DEM.
+
+Each panel (statistics, points of interest, view) folds to its header with its `-` / `+` button. The browser remembers the state of each panel, a reload included.
+
 ## Published R2 dataset
 
 Public host: [https://pub-d96348c50a354038a1df6f85e91e45c9.r2.dev](https://pub-d96348c50a354038a1df6f85e91e45c9.r2.dev). The default revision includes elevation and global Tianwen-1 MoRIC colour imagery:
@@ -41,27 +47,29 @@ HD here refers to the relief. The imagery of this revision is the global MoRIC m
 
 ## URL parameters
 
-| Parameter       | Values / units                                                | Default                                    | Effect                                                                                       |
-| --------------- | ------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `dataset`       | Revision folder URL                                           | Published R2 revision above, optional      | Reads `elevation.json` and, when available, `imagery.json`.                                  |
-| `lat`, `lon`    | Planetocentric degrees, east-positive longitude               | `18.4`, `77.6`                             | Point the camera orbits.                                                                     |
-| `radius`        | Metres                                                        | `90000`                                    | Distance from the camera to the orbited point.                                               |
-| `pitch`         | Degrees                                                       | `60`                                       | Camera inclination.                                                                          |
-| `yaw`           | Degrees                                                       | `0`                                        | Camera heading.                                                                              |
-| `scale`         | Number                                                        | `1`                                        | Vertical exaggeration, also controlled by the altitude slider.                               |
-| `imagery`       | `dataset`, `debug`, `none`                                    | `dataset` when published, otherwise `none` | Dataset imagery, a local checkerboard coloured by level, or relief alone.                    |
-| `elevation`     | `0` to disable                                                | Enabled                                    | `0` renders the dataset reference surface without relief.                                    |
-| `solid`         | `0` to disable                                                | Enabled                                    | `0` renders wireframe without imagery.                                                       |
-| `lighting`      | `ambient`, `terrain`                                          | `terrain`                                  | Uniform ambient lighting or lighting of the relief.                                          |
-| `renderer`      | `webgpu`, `webgl`                                             | `webgl`                                    | `webgpu` uses the WebGPU engine and WGSL shaders on supported browsers.                      |
-| `antialias`     | `0` to disable                                                | Enabled                                    | `0` disables antialiasing.                                                                   |
-| `grid`          | Cells per tile side: `4`, `8`, `16`, `32`, `64`, `128`, `256` | `64`                                       | Terrain grid resolution.                                                                     |
-| `sse`           | Pixels                                                        | `10`                                       | Tolerated screen-space error; lower values select finer terrain.                             |
-| `motion`        | `0` to disable                                                | Enabled                                    | `0` disables the reduction in refinement while the camera moves.                             |
-| `demCache`      | Entries                                                       | `2048`                                     | Elevation tile cache size.                                                                   |
-| `demAbortDelay` | Milliseconds                                                  | `500`                                      | Delay before cancelling an elevation load that is no longer needed.                          |
-| `monitor`       | `0` to disable                                                | Enabled                                    | `0` disables runtime monitoring and clears the statistics.                                   |
-| `hud`           | `0` to disable                                                | Enabled                                    | `0` hides the scale, compass and view readouts (`Alt`, `Ref`, `Gnd`, `Hdg`, `Pitch`, `Pos`). |
+| Parameter       | Values / units                                                | Default                                    | Effect                                                                                                     |
+| --------------- | ------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `dataset`       | Revision folder URL                                           | Published R2 revision above, optional      | Reads `elevation.json` and, when available, `imagery.json`.                                                |
+| `place`         | Identifier of [places.json](src/places.json)                  | None                                       | Point of interest the camera orbits, with its view. `lat`, `lon`, `radius`, `pitch` and `yaw` override it. |
+| `flySpeed`      | Number, `0.25` to `4` in the panel                            | `1`                                        | Speed multiplier of the flights to the places.                                                             |
+| `lat`, `lon`    | Planetocentric degrees, east-positive longitude               | `18.4`, `77.6`                             | Point the camera orbits.                                                                                   |
+| `radius`        | Metres                                                        | `90000`                                    | Distance from the camera to the orbited point.                                                             |
+| `pitch`         | Degrees                                                       | `60`                                       | Camera inclination.                                                                                        |
+| `yaw`           | Degrees                                                       | `0`                                        | Camera heading.                                                                                            |
+| `scale`         | Number                                                        | `1`                                        | Vertical exaggeration, also controlled by the altitude slider.                                             |
+| `imagery`       | `dataset`, `debug`, `none`                                    | `dataset` when published, otherwise `none` | Dataset imagery, a local checkerboard coloured by level, or relief alone.                                  |
+| `elevation`     | `0` to disable                                                | Enabled                                    | `0` renders the dataset reference surface without relief.                                                  |
+| `solid`         | `0` to disable                                                | Enabled                                    | `0` renders wireframe without imagery.                                                                     |
+| `lighting`      | `ambient`, `terrain`                                          | `terrain`                                  | Uniform ambient lighting or lighting of the relief.                                                        |
+| `renderer`      | `webgpu`, `webgl`                                             | `webgl`                                    | `webgpu` uses the WebGPU engine and WGSL shaders on supported browsers.                                    |
+| `antialias`     | `0` to disable                                                | Enabled                                    | `0` disables antialiasing.                                                                                 |
+| `grid`          | Cells per tile side: `4`, `8`, `16`, `32`, `64`, `128`, `256` | `64`                                       | Terrain grid resolution.                                                                                   |
+| `sse`           | Pixels                                                        | `10`                                       | Tolerated screen-space error; lower values select finer terrain.                                           |
+| `motion`        | `0` to disable                                                | Enabled                                    | `0` disables the reduction in refinement while the camera moves.                                           |
+| `demCache`      | Entries                                                       | `2048`                                     | Elevation tile cache size.                                                                                 |
+| `demAbortDelay` | Milliseconds                                                  | `500`                                      | Delay before cancelling an elevation load that is no longer needed.                                        |
+| `monitor`       | `0` to disable                                                | Enabled                                    | `0` disables runtime monitoring and clears the statistics.                                                 |
+| `hud`           | `0` to disable                                                | Enabled                                    | `0` hides the scale, compass and view readouts (`Alt`, `Ref`, `Gnd`, `Hdg`, `Pitch`, `Pos`).               |
 
 `imagery=dataset` requires a revision that publishes `imagery.json`. Append `&renderer=webgpu` to a preset to use WebGPU, or `&scale=2` to exaggerate the relief.
 

@@ -1,0 +1,135 @@
+/* Fold button of a panel, and the places panel of the body examples. */
+
+.sxr-panel__fold {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid #1976d2;
+  border-radius: 4px;
+  color: #43a5ff;
+  background: transparent;
+  font:
+    700 12px/1 ui-monospace,
+    monospace;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.sxr-panel__fold:hover,
+.sxr-panel__fold:focus-visible {
+  color: #d8ecff;
+  background: rgb(25 118 210 / 35%);
+}
+
+.sxr-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* A folded panel keeps its header only. */
+.sxr-panel--folded > :not(.sxr-panel__header) {
+  display: none !important;
+}
+
+/* The runtime panel stops before the places panel, so neither covers the other's fold button. */
+#runtime-panel {
+  min-width: 0;
+  max-width: calc(100vw - min(280px, 100vw - 32px) - 48px);
+}
+
+#runtime-panel.sxr-panel--folded,
+.sxr-view-hud.sxr-panel--folded {
+  min-width: 0;
+}
+
+/* The view HUD lets pointer events through; its header and button take them. */
+.sxr-view-hud .sxr-panel__header {
+  color: var(--sxr-view-hud-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sxr-places {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  gap: 6px;
+  width: min(280px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  padding: 12px 14px;
+  overflow: auto;
+  border: 1px solid #1976d2;
+  border-radius: 8px;
+  color: #d8ecff;
+  background: rgb(3 18 39 / 88%);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 35%);
+  font:
+    12px/1.35 Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
+.sxr-places.sxr-panel--folded {
+  width: auto;
+}
+
+.sxr-places .sxr-panel__header strong {
+  color: #43a5ff;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sxr-places ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sxr-places__place {
+  display: grid;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: inherit;
+  background: rgb(255 255 255 / 4%);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sxr-places__place:hover,
+.sxr-places__place:focus-visible {
+  border-color: #1976d2;
+  background: rgb(25 118 210 / 25%);
+}
+
+.sxr-places__place[aria-current="true"] {
+  border-color: #43a5ff;
+}
+
+.sxr-places__place small {
+  color: rgb(216 236 255 / 65%);
+}
+
+.sxr-places__speed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.sxr-places__speed input {
+  flex: 1;
+  min-width: 0;
+}
