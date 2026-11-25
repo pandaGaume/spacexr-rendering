@@ -61,10 +61,10 @@
         "prepublishOnly": "npm run lint && npm run typecheck && npm run test && npm run build"
     },
     "peerDependencies": {
-        "@babylonjs/core": "^9.37.0"
+        "@babylonjs/core": "^9.37.1"
     },
     "devDependencies": {
-        "@babylonjs/core": "^9.37.0",
+        "@babylonjs/core": "^9.37.1",
         "@types/node": "^20.11.0",
         "@typescript-eslint/eslint-plugin": "^7.0.0",
         "@typescript-eslint/parser": "^7.0.0",
