@@ -65,7 +65,7 @@
     },
     "peerDependencies": {
         "@babylonjs/core": "^9.37.0",
-        "@babylonjs/loaders": "^9.37.0"
+        "@babylonjs/loaders": "^9.37.1"
     },
     "peerDependenciesMeta": {
         "@babylonjs/loaders": {
@@ -84,7 +84,7 @@
     },
     "devDependencies": {
         "@babylonjs/core": "^9.37.0",
-        "@babylonjs/loaders": "^9.37.0",
+        "@babylonjs/loaders": "^9.37.1",
         "@types/node": "^20.11.0",
         "@typescript-eslint/eslint-plugin": "^7.0.0",
         "@typescript-eslint/parser": "^7.0.0",
